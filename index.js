@@ -6,6 +6,18 @@ require('dotenv').config();
 // JSON 파일 경로
 const filePath = './servers.json';
 
+//Server JSON파일 검증 및 생성
+function createFileIfNotExists(path, initialData = {}) {
+    try {
+        if (!fs.existsSync(path)) {
+            fs.writeFileSync(path, JSON.stringify(initialData, null, 4), 'utf8');
+            console.log(`${path} 파일이 생성되었습니다.`);
+        }
+    } catch (error) {
+        console.error(`파일 생성 중 오류 발생: ${error.message}`);
+    }
+}
+
 // 실행 중인 서버를 관리할 객체
 const runningServers = {};
 
@@ -178,6 +190,7 @@ const client = new Client({
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
+    createFileIfNotExists(filePath, {});
     updateBotStatus(client); // 봇 상태 초기화
 });
 
