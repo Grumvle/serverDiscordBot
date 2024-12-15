@@ -101,47 +101,54 @@ function splitMessage(message) {
     return chunks;
 }
 
-// 📁 서버 추가
+// 📁 서버 추가 기능
 export function handleAddServer(message, args) {
-    // 1️⃣ 정규식을 사용하여 인수를 정확히 추출
+    // 1️⃣ 정규식을 사용하여 게임 이름, 경로, 설명, 종료 명령어 추출
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
 
-    if (!input || input.length < 4) {
-        message.reply('❌ 사용법: `$서버추가 [게임 이름] [서버 경로] [설명] [종료 명령어]`\n예: `$서버추가 "좀보이드" "D:\\Dedicated Servers\\Project Zomboid Dedicated Server\\StartServer64.bat" "프로젝트 좀보이드 서버" quit`');
+    // 명령어 예: $서버추가 "pzserver" "D:\Dedicated Servers\Project Zomboid Dedicated Server\StartServer64.bat" "프로젝트 좀보이드 서버" quit
+    if (!input || input.length < 5) {
+        message.reply('❌ 사용법: `$서버추가 [게임 이름] [서버 경로] [설명] [종료 명령어]`\n예: `$서버추가 "pzserver" "D:\\Dedicated Servers\\Project Zomboid Dedicated Server\\StartServer64.bat" "프로젝트 좀보이드 서버" quit`');
         return;
     }
 
-    const gameName = input[1].replace(/"/g, '').trim(); // 첫 번째 인수 (게임 이름)
-    const serverPath = input[2].replace(/"/g, '').trim(); // 두 번째 인수 (경로)
-    const description = input[3].replace(/"/g, '').trim(); // 세 번째 인수 (설명)
-    const stopCommand = input[4].replace(/"/g, '').trim(); // 네 번째 인수 (종료 명령어)
+    // 2️⃣ 게임 이름, 경로, 설명, 종료 명령어 추출
+    const gameName = input[1].replace(/"/g, '').trim();
+    let serverPath = input[2].replace(/"/g, '').trim();
+    const detail = input[3].replace(/"/g, '').trim();
+    const stopCommand = input[4].replace(/"/g, '').trim();
 
-    if (!gameName || !serverPath || !stopCommand) {
-        message.reply('❌ 입력값이 부족합니다. 사용법: `$서버추가 [게임 이름] [서버 경로] [설명] [종료 명령어]`');
-        return;
+    // 3️⃣ 공백이 포함된 경로에 큰따옴표 추가
+    if (serverPath.includes(' ')) {
+        serverPath = `"${serverPath}"`;
     }
 
-    if (!gameName.match(/^[a-zA-Z0-9가-힣_]+$/)) {
-        message.reply(`❌ 서버 이름에 특수 문자를 사용할 수 없습니다. 사용 가능한 이름: **영문, 숫자, 한글, 밑줄(_)**`);
+    // 4️⃣ 경로의 중복 백슬래시를 하나로 정리
+    serverPath = serverPath.replace(/\\\\/g, '\\');
+
+    if (!gameName || !serverPath || !detail || !stopCommand) {
+        message.reply('❌ 사용법: `$서버추가 [게임 이름] [서버 경로] [설명] [종료 명령어]`\n예: `$서버추가 "pzserver" "D:\\Dedicated Servers\\Project Zomboid Dedicated Server\\StartServer64.bat" "프로젝트 좀보이드 서버" quit`');
         return;
     }
 
     const servers = loadServers();
+
+    // 5️⃣ 서버가 이미 존재할 때
     if (servers[gameName]) {
-        message.reply(`❌ 서버 "${gameName}"는 이미 존재합니다.`);
+        message.reply(`❌ **${gameName}** 서버는 이미 존재합니다.`);
         return;
     }
 
-    // 서버 정보 추가
-    servers[gameName] = { 
-        path: serverPath, 
-        detail: description || '상세 정보 없음', 
-        stopCommand 
+    // 6️⃣ 서버 추가
+    servers[gameName] = {
+        path: serverPath,
+        detail: detail,
+        stopCommand: stopCommand
     };
 
-    // 서버 정보 저장
     saveServers(servers);
-    message.reply(`✅ 서버 **${gameName}** 추가 완료.\n📂 경로: **${serverPath}**\n📄 설명: **${description || '상세 정보 없음'}**`);
+
+    message.reply(`✅ **${gameName}** 서버 추가 완료.\n📂 경로: **${serverPath}**\n📄 설명: **${detail}**`);
 }
 
 // 📁 서버 제거 기능
@@ -196,7 +203,6 @@ export function handleListServers(message) {
 
 // 📁 서버 시작 기능
 export function handleStartServer(client, message, args) {
-    // 1️⃣ 정규식을 사용하여 게임 이름 추출
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
 
     // 명령어 예: $서버시작 "좀보이드"
@@ -205,7 +211,6 @@ export function handleStartServer(client, message, args) {
         return;
     }
 
-    // 2️⃣ 게임 이름 추출 (명령어 뒤의 첫 번째 인수)
     const gameName = input[1].replace(/"/g, '').trim();
 
     if (!gameName) {
@@ -215,23 +220,39 @@ export function handleStartServer(client, message, args) {
 
     const servers = loadServers();
 
-    // 3️⃣ 서버가 존재하지 않을 때의 에러 처리
+    // 서버가 존재하지 않을 때의 에러 처리
     if (!servers[gameName]) {
         message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
     }
 
-    // 4️⃣ 서버 시작
     const serverInfo = servers[gameName];
-    const { path } = serverInfo;
+    let { path: serverPath } = serverInfo;
 
-    if (!path) {
+    if (!serverPath) {
         message.reply(`❌ **${gameName}** 서버의 경로가 설정되지 않았습니다.`);
         return;
     }
 
+    // 1️⃣ 경로에 공백이 있을 경우 큰따옴표 추가
+    if (!serverPath.startsWith('"') && !serverPath.endsWith('"')) {
+        serverPath = `"${serverPath}"`;
+    }
+
+    // 2️⃣ 경로의 중복 백슬래시를 하나로 정리
+    serverPath = serverPath.replace(/\\\\/g, '\\');
+
+    // 3️⃣ 중복된 큰따옴표 제거
+    serverPath = serverPath.replace(/""/g, '"');
+
+    // 4️⃣ 경로에 파일이 존재하지 않는 경우 에러 메시지 출력
+    if (!fs.existsSync(serverPath.replace(/"/g, ''))) {
+        message.reply(`❌ **${serverPath}** 파일을 찾을 수 없습니다. 경로가 올바른지 확인해 주세요.`);
+        return;
+    }
+
     try {
-        const serverProcess = spawn(path, { shell: true });
+        const serverProcess = spawn(`"${serverPath}"`, { shell: true });
 
         runningServers[gameName] = serverProcess; // 실행 중인 서버 등록
 
@@ -241,7 +262,6 @@ export function handleStartServer(client, message, args) {
 
         serverProcess.stderr.on('data', (data) => {
             console.error(`[${gameName} 서버 에러]: ${data}`);
-            message.reply(`❌ 서버 시작 중 오류 발생: ${data}`)
         });
 
         serverProcess.on('close', (code) => {
