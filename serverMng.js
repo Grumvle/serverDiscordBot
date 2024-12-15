@@ -229,7 +229,7 @@ export function handleStartServer(client, message, args) {
     try {
         const serverProcess = spawn(serverPath, { shell: true });
 
-        // 🟢 **서버 프로세스를 전역 변수에 저장**
+        // 🟢 서버 프로세스를 전역 변수에 저장
         runningServers[gameName] = serverProcess; 
 
         serverProcess.stdout.on('data', (data) => {
@@ -243,6 +243,10 @@ export function handleStartServer(client, message, args) {
         serverProcess.on('close', (code) => {
             console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
             delete runningServers[gameName]; // 종료되면 프로세스를 삭제
+        });
+
+        serverProcess.on('error', (error) => {
+            console.error(`❌ 서버 프로세스 오류 발생: ${error.message}`);
         });
 
         message.reply(`🚀 **${gameName}** 서버를 실행했습니다.`);
@@ -282,15 +286,22 @@ export function handleStopServer(client, message, args) {
     }
 
     try {
-        // 🛑 **현재 실행 중인 프로세스에 종료 명령어를 입력**
-        serverProcess.stdin.write(`${stopCommand}\n`);
-        serverProcess.stdin.end();
+        if (serverProcess.stdin.writable && !serverProcess.stdin.writableEnded) {
+            serverProcess.stdin.write(`${stopCommand}\n`);
+            console.log(`🛑 서버 ${gameName}에 종료 명령어 입력됨: ${stopCommand}`);
+        } else {
+            console.log(`❌ 서버 ${gameName}의 stdin이 이미 종료되었습니다.`);
+        }
 
         message.reply(`🛑 **${gameName}** 서버 종료 명령어 실행: ${stopCommand}`);
 
         serverProcess.on('close', (code) => {
             console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
             delete runningServers[gameName]; // 종료되면 프로세스를 삭제
+        });
+
+        serverProcess.on('error', (error) => {
+            console.error(`❌ 서버 프로세스 오류 발생: ${error.message}`);
         });
     } catch (error) {
         console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
