@@ -6,6 +6,7 @@ import {
     handleStartServer,
     handleStopServer,
     handleRunningServers,
+    handleRemoveServer,
 } from './serverMng.js'; 
 import {
     setParticipants,
@@ -17,7 +18,8 @@ import {
     divideIntoTeams, 
     sendTeamEmbed 
 } from './teamSplit.js'; 
-import getVoiceChannelMembersByNickname from './util.js';
+import { runDraw } from './draw.js';
+import { getVoiceChannelMembersByNickname } from './utils.js';
 import { Client, GatewayIntentBits } from 'discord.js';
 import 'dotenv/config';
 
@@ -60,6 +62,10 @@ client.on('messageCreate', async (message) => {
 
         case '$서버정지':
             handleStopServer(client, message, args);
+            break;
+        
+        case '$서버제거':
+            handleRemoveServer(message, args);
             break;
 
         case '$실행서버':
@@ -154,6 +160,42 @@ client.on('messageCreate', async (message) => {
                 try {
                     const teams = divideIntoTeams(participants, teamCount);
                     sendTeamEmbed(message, teams);
+                } catch (error) {
+                    message.reply(error.message);
+                }
+            }
+            break;
+
+            case '$제비뽑기':
+            if (option === '음성채널') {
+                const channelName = args.slice(0, -1).join(' ').trim();
+                const drawCount = parseInt(args[args.length - 1], 10);
+                const participants = await getVoiceChannelMembersByNickname(client, channelName);
+
+                if (participants.length === 0) {
+                    message.reply(`"${channelName}" 채널에 참가자가 없습니다.`);
+                    return;
+                }
+
+                try {
+                    const winners = runDraw(participants, drawCount);
+                    message.reply(`🎉 제비뽑기 당첨자: ${winners.join(', ')}`);
+                } catch (error) {
+                    message.reply(error.message);
+                }
+
+            } else if (option === '사용자') {
+                const participants = args.slice(0, -1);
+                const drawCount = parseInt(args[args.length - 1], 10);
+
+                if (participants.length === 0 || isNaN(drawCount)) {
+                    message.reply('사용법: $제비뽑기 사용자 [참가자1] [참가자2] ... [당첨 인원 수]');
+                    return;
+                }
+
+                try {
+                    const winners = runDraw(participants, drawCount);
+                    message.reply(`🎉 제비뽑기 당첨자: ${winners.join(', ')}`);
                 } catch (error) {
                     message.reply(error.message);
                 }

@@ -4,7 +4,7 @@
  * @param {string} identifier - 채널 이름 또는 채널 ID
  * @returns {Promise<Array<string>>} - 닉네임 목록
  */
-export default async function getVoiceChannelMembersByNickname(client, identifier) {
+export async function getVoiceChannelMembersByNickname(client, identifier) {
     let channel;
 
     try {
@@ -25,4 +25,14 @@ export default async function getVoiceChannelMembersByNickname(client, identifie
 
     const nicknames = channel.members.map(member => member.nickname || member.user.username);
     return nicknames;
+}
+
+
+/**
+ * 배열을 랜덤하게 섞는 함수
+ * @param {Array} array - 섞고자 하는 배열
+ * @returns {Array} - 섞인 배열
+ */
+export function shuffle(array) {
+    return [...array].sort(() => Math.random() - 0.5);
 }
