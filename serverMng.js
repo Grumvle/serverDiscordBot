@@ -103,43 +103,30 @@ function splitMessage(message) {
 
 // 📁 서버 추가 기능
 export function handleAddServer(message, args) {
-    // 1️⃣ 정규식을 사용하여 게임 이름, 경로, 설명, 종료 명령어 추출
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
-
-    // 명령어 예: $서버추가 "pzserver" "D:\Dedicated Servers\Project Zomboid Dedicated Server\StartServer64.bat" "프로젝트 좀보이드 서버" quit
     if (!input || input.length < 5) {
         message.reply('❌ 사용법: `$서버추가 [게임 이름] [서버 경로] [설명] [종료 명령어]`\n예: `$서버추가 "pzserver" "D:\\Dedicated Servers\\Project Zomboid Dedicated Server\\StartServer64.bat" "프로젝트 좀보이드 서버" quit`');
         return;
     }
 
-    // 2️⃣ 게임 이름, 경로, 설명, 종료 명령어 추출
     const gameName = input[1].replace(/"/g, '').trim();
     let serverPath = input[2].replace(/"/g, '').trim();
     const detail = input[3].replace(/"/g, '').trim();
     const stopCommand = input[4].replace(/"/g, '').trim();
-
-    // 3️⃣ 공백이 포함된 경로에 큰따옴표 추가
-    if (serverPath.includes(' ')) {
-        serverPath = `"${serverPath}"`;
-    }
-
-    // 4️⃣ 경로의 중복 백슬래시를 하나로 정리
-    serverPath = serverPath.replace(/\\\\/g, '\\');
 
     if (!gameName || !serverPath || !detail || !stopCommand) {
         message.reply('❌ 사용법: `$서버추가 [게임 이름] [서버 경로] [설명] [종료 명령어]`\n예: `$서버추가 "pzserver" "D:\\Dedicated Servers\\Project Zomboid Dedicated Server\\StartServer64.bat" "프로젝트 좀보이드 서버" quit`');
         return;
     }
 
-    const servers = loadServers();
+    serverPath = validateServerPath(serverPath);
 
-    // 5️⃣ 서버가 이미 존재할 때
+    const servers = loadServers();
     if (servers[gameName]) {
         message.reply(`❌ **${gameName}** 서버는 이미 존재합니다.`);
         return;
     }
 
-    // 6️⃣ 서버 추가
     servers[gameName] = {
         path: serverPath,
         detail: detail,
@@ -147,7 +134,6 @@ export function handleAddServer(message, args) {
     };
 
     saveServers(servers);
-
     message.reply(`✅ **${gameName}** 서버 추가 완료.\n📂 경로: **${serverPath}**\n📄 설명: **${detail}**`);
 }
 
@@ -204,63 +190,29 @@ export function handleListServers(message) {
 // 📁 서버 시작 기능
 export function handleStartServer(client, message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
-
-    // 명령어 예: $서버시작 "pzserver"
     if (!input || input.length < 2) {
         message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
         return;
     }
 
     const gameName = input[1].replace(/"/g, '').trim();
-
-    if (!gameName) {
-        message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
-        return;
-    }
-
     const servers = loadServers();
 
-    // 서버가 존재하지 않을 때의 에러 처리
     if (!servers[gameName]) {
         message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
     }
 
-    const serverInfo = servers[gameName];
-    let { path: serverPath } = serverInfo;
+    let serverPath = servers[gameName].path;
+    serverPath = validateServerPath(serverPath);
 
-    if (!serverPath) {
-        message.reply(`❌ **${gameName}** 서버의 경로가 설정되지 않았습니다.`);
-        return;
-    }
-
-    // 1️⃣ 경로 정리
-    serverPath = serverPath.replace(/""/g, '"');
-    serverPath = serverPath.replace(/\\/g, '\\');
-    serverPath = serverPath.trim();
-
-    // 2️⃣ 경로에 공백이 있을 경우 큰따옴표 추가
-    if (!serverPath.startsWith('"') && !serverPath.endsWith('"')) {
-        serverPath = `"${serverPath}"`;
-    }
-
-    // 3️⃣ 경로에 파일이 존재하는지 확인
     if (!fs.existsSync(serverPath.replace(/"/g, ''))) {
-        message.reply(`❌ **${serverPath}** 파일을 찾을 수 없습니다. 경로가 올바른지 확인해 주세요.`);
+        message.reply(`❌ **${serverPath}** 파일을 찾을 수 없습니다.`);
         return;
     }
 
     try {
-        // 4️⃣ CMD 명령어로 실행 (중요: 첫 번째 "" 인수는 창 제목을 의미)
         const serverProcess = spawn('cmd.exe', ['/c', `start "" ${serverPath}`], { shell: true });
-
-        serverProcess.stdout.on('data', (data) => {
-            console.log(`[${gameName} 서버]: ${data}`);
-        });
-
-        serverProcess.stderr.on('data', (data) => {
-            console.error(`[${gameName} 서버 에러]: ${data}`);
-        });
 
         serverProcess.on('close', (code) => {
             console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
@@ -268,7 +220,6 @@ export function handleStartServer(client, message, args) {
 
         message.reply(`🚀 **${gameName}** 서버를 실행했습니다.`);
     } catch (error) {
-        console.error(`❌ 서버 시작 중 오류 발생: ${error.message}`);
         message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다.`);
     }
 }
