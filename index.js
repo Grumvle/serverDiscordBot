@@ -1,4 +1,4 @@
-import { botCommand } from './botCommands'; // 명령어 가져오기
+import { botCommand } from './botCommands.js'; 
 import {
     handleCommands,
     handleAddServer,
@@ -6,15 +6,20 @@ import {
     handleStartServer,
     handleStopServer,
     handleRunningServers,
-} from './gameServerFunc'; // 서버 관련 기능
+} from './serverMng.js'; 
 import {
     setParticipants,
     setResults,
     runLadder,
     setParticipantsFromVoiceChannel,
-} from './ladder'; // 사다리 관련 기능
+} from './ladder.js'; 
+import { 
+    divideIntoTeams, 
+    sendTeamEmbed 
+} from './teamSplit.js'; 
+import getVoiceChannelMembersByNickname from './util.js';
 import { Client, GatewayIntentBits } from 'discord.js';
-require('dotenv').config();
+import 'dotenv/config';
 
 // 디스코드 클라이언트 생성
 const client = new Client({
@@ -31,26 +36,12 @@ client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 });
 
-/**
- * 음성 채널 멤버 가져오기
- * @param {string} channelId - 음성 채널 ID
- * @returns {Promise<Array<string>>} - 음성 채널 멤버 이름 배열
- */
-async function getVoiceChannelMembers(channelId) {
-    const channel = await client.channels.fetch(channelId);
-    if (!channel || channel.type !== 2) {
-        return [];
-    }
-    return channel.members.map(member => member.user.username);
-}
-
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.content.startsWith('$')) return;
 
     const [command, option, ...args] = message.content.split(' ');
 
     switch (command) {
-        // 서버 관련 명령어
         case '$명령어':
             handleCommands(message, botCommand);
             break;
@@ -79,13 +70,16 @@ client.on('messageCreate', async (message) => {
         case '$사다리':
             switch (option) {
                 case '음성채널':
-                    if (!args[0]) {
-                        message.reply('사용법: $사다리 음성채널 [채널 ID]');
+                    if (!args.length) {
+                        message.reply('사용법: $사다리 음성채널 [채널 이름 또는 채널 ID]');
                         return;
                     }
-                    const members = await getVoiceChannelMembers(args[0]);
+
+                    const channelName = args.join(' ').trim();
+                    const members = await getVoiceChannelMembersByNickname(client, channelName);
+
                     if (members.length === 0) {
-                        message.reply('음성 채널에 참가자가 없습니다.');
+                        message.reply(`"${channelName}" 채널에 참가자가 없습니다. 채널 이름이 정확한지 확인하세요.`);
                     } else {
                         setParticipantsFromVoiceChannel(members);
                         message.reply(`참가자가 설정되었습니다:\n- ${members.join('\n- ')}\n결과를 추가하려면 $사다리 결과 [결과1] [결과2] ... 명령어를 사용하세요.`);
@@ -123,6 +117,46 @@ client.on('messageCreate', async (message) => {
                 default:
                     message.reply('알 수 없는 옵션입니다. $사다리 음성채널, $사다리 설정, $사다리 결과, $사다리 시작 중 하나를 입력하세요.');
                     break;
+            }
+            break;
+
+        case '$팀나누기':
+            if (option === '음성채널') {
+                const channelName = args.slice(0, -1).join(' ').trim();
+                const teamCount = parseInt(args[args.length - 1], 10);
+
+                if (!channelName || isNaN(teamCount)) {
+                    message.reply('사용법: $팀나누기 음성채널 [채널 이름] [팀 수]');
+                    return;
+                }
+
+                const participants = await getVoiceChannelMembersByNickname(client, channelName);
+                if (participants.length === 0) {
+                    message.reply(`"${channelName}" 채널에 참가자가 없습니다.`);
+                    return;
+                }
+
+                try {
+                    const teams = divideIntoTeams(participants, teamCount);
+                    sendTeamEmbed(message, teams);
+                } catch (error) {
+                    message.reply(error.message);
+                }
+            } else if (option === '사용자') {
+                const participants = args.slice(0, -1);
+                const teamCount = parseInt(args[args.length - 1], 10);
+
+                if (participants.length === 0 || isNaN(teamCount)) {
+                    message.reply('사용법: $팀나누기 사용자 [참가자1] [참가자2] ... [팀 수]');
+                    return;
+                }
+
+                try {
+                    const teams = divideIntoTeams(participants, teamCount);
+                    sendTeamEmbed(message, teams);
+                } catch (error) {
+                    message.reply(error.message);
+                }
             }
             break;
 

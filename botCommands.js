@@ -16,9 +16,16 @@ export const ladderCommands = {
     '$사다리 시작': '사다리타기를 시작합니다.',
 };
 
+// 팀 나누기 명령어 목록
+export const teamCommands = {
+    '$팀나누기 음성채널': '음성 채널의 참가자를 랜덤으로 팀으로 나눕니다.\n 사용법: $팀나누기 음성채널 [채널 이름] [팀 수]',
+    '$팀나누기 사용자': '직접 입력한 참가자를 랜덤으로 팀으로 나눕니다.\n 사용법: $팀나누기 사용자 [참가자1] [참가자2] ... [팀 수]',
+};
+
 // 모든 명령어를 통합한 목록
 export const botCommand = {
     ...serverCommands,
     ...ladderCommands,
+    ...teamCommands,
     '$명령어': '사용 가능한 모든 명령어를 확인합니다.'
 };

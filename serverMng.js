@@ -1,4 +1,5 @@
-const fs = require('fs');
+import fs from 'fs';
+import { botCommand } from './botCommands.js';
 const filePath = process.env.filePath
 
 // 실행 중인 서버를 관리할 객체
@@ -30,11 +31,9 @@ export function updateBotStatus(client) {
 
 // 명령어 목록 출력
 export function handleCommands(message) {
-    let count = 0;
     let response = '**사용 가능한 명령어 목록:**\n';
     for (const [key, value] of Object.entries(botCommand)) {
-        count++;
-        response += `${count}. ${key}: ${value}\n`;
+        response += `- ${key}: ${value}\n`;
     }
     message.reply(response);
 }

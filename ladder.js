@@ -6,7 +6,7 @@ let results = [];
  * 참가자 설정 함수
  * @param {Array<string>} names - 참가자 이름 배열
  */
-function setParticipants(names) {
+export function setParticipants(names) {
     participants = names;
 }
 
@@ -14,7 +14,7 @@ function setParticipants(names) {
  * 결과 설정 함수
  * @param {Array<string>} resultList - 결과 배열
  */
-function setResults(resultList) {
+export function setResults(resultList) {
     results = resultList;
 }
 
@@ -22,7 +22,7 @@ function setResults(resultList) {
  * 사다리타기 실행
  * @returns {Array<Object>} - 참가자와 결과가 매칭된 배열
  */
-function runLadder() {
+export function runLadder() {
     if (participants.length === 0 || results.length === 0) {
         throw new Error('참가자 또는 결과가 설정되지 않았습니다.');
     }
@@ -55,14 +55,6 @@ function runLadder() {
  * 음성 채널 멤버를 참가자로 설정
  * @param {Array<string>} members - 음성 채널 멤버 이름 배열
  */
-function setParticipantsFromVoiceChannel(members) {
+export function setParticipantsFromVoiceChannel(members) {
     participants = members;
 }
-
-// 모듈 export
-module.exports = {
-    setParticipants,
-    setResults,
-    runLadder,
-    setParticipantsFromVoiceChannel,
-};
