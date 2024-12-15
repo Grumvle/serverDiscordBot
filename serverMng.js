@@ -201,10 +201,11 @@ export function handleListServers(message) {
     }
 }
 
-// 📁 서버 시작 기능
+// 서버 시작 기능
 export function handleStartServer(client, message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
 
+    // 명령어 예: $서버시작 "pzserver"
     if (!input || input.length < 2) {
         message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
         return;
@@ -219,6 +220,7 @@ export function handleStartServer(client, message, args) {
 
     const servers = loadServers();
 
+    // 서버가 존재하지 않을 때의 에러 처리
     if (!servers[gameName]) {
         message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
@@ -242,13 +244,14 @@ export function handleStartServer(client, message, args) {
         serverPath = `"${serverPath}"`;
     }
 
-    // 3️⃣ 경로에 파일이 존재하지 않는 경우 에러 메시지 출력
+    // 3️⃣ 경로에 파일이 존재하는지 확인
     if (!fs.existsSync(serverPath.replace(/"/g, ''))) {
         message.reply(`❌ **${serverPath}** 파일을 찾을 수 없습니다. 경로가 올바른지 확인해 주세요.`);
         return;
     }
 
     try {
+        // 4️⃣ CMD 명령어로 실행
         const serverProcess = spawn(`cmd.exe`, ['/c', `start ${serverPath}`], { shell: true });
 
         serverProcess.stdout.on('data', (data) => {
