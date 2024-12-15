@@ -1,6 +1,5 @@
-import { botCommand } from './botCommands.js'; 
+import { botCommand, handleCommands } from './botCommands.js'; 
 import {
-    handleCommands,
     handleAddServer,
     handleListServers,
     handleStartServer,

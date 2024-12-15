@@ -36,3 +36,56 @@ export const botCommand = {
     ...drawCommands,
     '$명령어': '사용 가능한 모든 명령어를 확인합니다.',
 };
+
+// 명령어 목록 출력
+export function handleCommands(message) {
+    // 📚 **서버 관리 명령어**
+    let response = '**📚 서버 관리 명령어**\n';
+    for (const [key, value] of Object.entries(serverCommands)) {
+        response += `**${key}**\n  ${value}\n`;
+    }
+
+    // 🎉 **사다리타기 명령어**
+    response += '\n**🎉 사다리타기 명령어**\n';
+    for (const [key, value] of Object.entries(ladderCommands)) {
+        response += `**${key}**\n  ${value}\n`;
+    }
+
+    // 🤝 **팀 나누기 명령어**
+    response += '\n**🤝 팀 나누기 명령어**\n';
+    for (const [key, value] of Object.entries(teamCommands)) {
+        response += `**${key}**\n  ${value}\n`;
+    }
+
+    // 🎉 **제비뽑기 명령어**
+    response += '\n**🎉 제비뽑기 명령어**\n';
+    for (const [key, value] of Object.entries(drawCommands)) {
+        response += `**${key}**\n  ${value}\n`;
+    }
+
+    // 📘 **기타 명령어**
+    response += '\n**📘 기타 명령어**\n';
+    response += `**$명령어**\n  사용 가능한 모든 명령어를 확인합니다.\n`;
+
+    // Discord 메시지 길이 제한 (2000자) 확인
+    if (response.length > 2000) {
+        const messageChunks = splitMessage(response);
+        messageChunks.forEach(chunk => message.reply(chunk));
+    } else {
+        message.reply(response);
+    }
+}
+
+/**
+ * 긴 메시지를 Discord의 최대 길이(2000자)로 나누는 함수
+ * @param {string} message - 전체 메시지
+ * @returns {Array<string>} - 잘린 메시지의 배열
+ */
+function splitMessage(message) {
+    const maxLength = 2000; // Discord의 메시지 최대 길이
+    const chunks = [];
+    for (let i = 0; i < message.length; i += maxLength) {
+        chunks.push(message.slice(i, i + maxLength));
+    }
+    return chunks;
+}
