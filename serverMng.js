@@ -232,35 +232,50 @@ export function handleStartServer(client, message, args) {
     }
 }
 
-// 서버 정지
+// 📁 서버 정지 기능
 export function handleStopServer(client, message, args) {
-    const [gameName] = args;
+    const input = message.content.split(' ');
+    const gameName = input[1]?.trim();
 
     if (!gameName) {
-        message.reply('사용법: $서버정지 [게임 이름]');
+        message.reply('❌ 사용법: `$서버정지 [게임 이름]`\n예: `$서버정지 "pzserver"`');
         return;
     }
 
     const servers = loadServers();
-    const serverInfo = servers[gameName];
-    if (!serverInfo) {
-        message.reply(`"${gameName}" 서버를 찾을 수 없습니다.`);
+    if (!servers[gameName]) {
+        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
     }
 
     const serverProcess = runningServers[gameName];
     if (!serverProcess) {
-        message.reply(`"${gameName}" 서버는 실행 중이지 않습니다.`);
+        message.reply(`❌ **${gameName}** 서버는 실행 중이지 않습니다.`);
         return;
     }
 
-    const { stopCommand } = serverInfo;
+    const stopCommand = servers[gameName].stopCommand;
 
-    serverProcess.stdin.write(`${stopCommand}\n`);
-    serverProcess.stdin.end(); // 입력 스트림 종료
-    delete runningServers[gameName]; // 실행 중인 서버에서 제거
-    message.reply(`"${gameName}" 서버 종료 명령어를 실행했습니다.`);
-    updateBotStatus(client); // 봇 상태 업데이트
+    if (!stopCommand) {
+        message.reply(`❌ **${gameName}** 서버의 종료 명령어가 설정되지 않았습니다.`);
+        return;
+    }
+
+    try {
+        // 🛑 **현재 실행 중인 프로세스에 종료 명령어를 입력**
+        serverProcess.stdin.write(`${stopCommand}\n`);
+        serverProcess.stdin.end();
+
+        message.reply(`🛑 **${gameName}** 서버 종료 명령어 실행: ${stopCommand}`);
+
+        serverProcess.on('close', (code) => {
+            console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
+            delete runningServers[gameName]; // 종료되면 프로세스를 삭제
+        });
+    } catch (error) {
+        console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
+        message.reply(`❌ **${gameName}** 서버 정지 중 오류가 발생했습니다.`);
+    }
 }
 
 // 실행 중인 서버 목록 확인
