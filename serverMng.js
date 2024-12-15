@@ -205,22 +205,20 @@ export function handleListServers(message) {
 export function handleStartServer(client, message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
 
-    // 명령어 예: $서버시작 "좀보이드"
     if (!input || input.length < 2) {
-        message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "좀보이드"`');
+        message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
         return;
     }
 
     const gameName = input[1].replace(/"/g, '').trim();
 
     if (!gameName) {
-        message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "좀보이드"`');
+        message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
         return;
     }
 
     const servers = loadServers();
 
-    // 서버가 존재하지 않을 때의 에러 처리
     if (!servers[gameName]) {
         message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
@@ -234,27 +232,24 @@ export function handleStartServer(client, message, args) {
         return;
     }
 
-    // 1️⃣ 경로에 공백이 있을 경우 큰따옴표 추가
+    // 1️⃣ 경로 정리
+    serverPath = serverPath.replace(/""/g, '"');
+    serverPath = serverPath.replace(/\\/g, '\\');
+    serverPath = serverPath.trim();
+
+    // 2️⃣ 경로에 공백이 있을 경우 큰따옴표 추가
     if (!serverPath.startsWith('"') && !serverPath.endsWith('"')) {
         serverPath = `"${serverPath}"`;
     }
 
-    // 2️⃣ 경로의 중복 백슬래시를 하나로 정리
-    serverPath = serverPath.replace(/\\\\/g, '\\');
-
-    // 3️⃣ 중복된 큰따옴표 제거
-    serverPath = serverPath.replace(/""/g, '"');
-
-    // 4️⃣ 경로에 파일이 존재하지 않는 경우 에러 메시지 출력
+    // 3️⃣ 경로에 파일이 존재하지 않는 경우 에러 메시지 출력
     if (!fs.existsSync(serverPath.replace(/"/g, ''))) {
         message.reply(`❌ **${serverPath}** 파일을 찾을 수 없습니다. 경로가 올바른지 확인해 주세요.`);
         return;
     }
 
     try {
-        const serverProcess = spawn(`"${serverPath}"`, { shell: true });
-
-        runningServers[gameName] = serverProcess; // 실행 중인 서버 등록
+        const serverProcess = spawn(`cmd.exe`, ['/c', `start ${serverPath}`], { shell: true });
 
         serverProcess.stdout.on('data', (data) => {
             console.log(`[${gameName} 서버]: ${data}`);
@@ -266,7 +261,6 @@ export function handleStartServer(client, message, args) {
 
         serverProcess.on('close', (code) => {
             console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
-            delete runningServers[gameName]; // 실행 중인 서버에서 제거
         });
 
         message.reply(`🚀 **${gameName}** 서버를 실행했습니다.`);
