@@ -197,21 +197,28 @@ export function handleListServers(message) {
 
 // 📁 서버 시작 기능
 export function handleStartServer(client, message, args) {
-    const input = message.content.match(/"([^"]+)"|(\S+)/g);
-    if (!input || input.length < 2) {
+    const input = message.content.split(' ');
+    const gameName = input[1]?.trim();
+
+    if (!gameName) {
         message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
         return;
     }
 
-    const gameName = input[1].replace(/"/g, '').trim();
     const servers = loadServers();
-
     if (!servers[gameName]) {
         message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
     }
 
-    let serverPath = servers[gameName].path;
+    const serverInfo = servers[gameName];
+    let { path: serverPath } = serverInfo;
+
+    if (!serverPath) {
+        message.reply(`❌ **${gameName}** 서버의 경로가 설정되지 않았습니다.`);
+        return;
+    }
+
     serverPath = validateServerPath(serverPath);
 
     if (!fs.existsSync(serverPath.replace(/"/g, ''))) {
@@ -220,14 +227,27 @@ export function handleStartServer(client, message, args) {
     }
 
     try {
-        const serverProcess = spawn('cmd.exe', ['/c', `start "" ${serverPath}`], { shell: true });
+        const serverProcess = spawn(serverPath, { shell: true });
+
+        // 🟢 **서버 프로세스를 전역 변수에 저장**
+        runningServers[gameName] = serverProcess; 
+
+        serverProcess.stdout.on('data', (data) => {
+            console.log(`[${gameName} 서버]: ${data}`);
+        });
+
+        serverProcess.stderr.on('data', (data) => {
+            console.error(`[${gameName} 서버 에러]: ${data}`);
+        });
 
         serverProcess.on('close', (code) => {
             console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
+            delete runningServers[gameName]; // 종료되면 프로세스를 삭제
         });
 
         message.reply(`🚀 **${gameName}** 서버를 실행했습니다.`);
     } catch (error) {
+        console.error(`❌ 서버 시작 중 오류 발생: ${error.message}`);
         message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다.`);
     }
 }
