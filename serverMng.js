@@ -201,7 +201,7 @@ export function handleListServers(message) {
     }
 }
 
-// 서버 시작 기능
+// 📁 서버 시작 기능
 export function handleStartServer(client, message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
 
@@ -251,8 +251,8 @@ export function handleStartServer(client, message, args) {
     }
 
     try {
-        // 4️⃣ CMD 명령어로 실행
-        const serverProcess = spawn(`cmd.exe`, ['/c', `start ${serverPath}`], { shell: true });
+        // 4️⃣ CMD 명령어로 실행 (중요: 첫 번째 "" 인수는 창 제목을 의미)
+        const serverProcess = spawn('cmd.exe', ['/c', `start "" ${serverPath}`], { shell: true });
 
         serverProcess.stdout.on('data', (data) => {
             console.log(`[${gameName} 서버]: ${data}`);
