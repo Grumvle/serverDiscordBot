@@ -7,6 +7,14 @@ const filePath = process.env.filePath
 // 실행 중인 서버를 관리할 객체
 const runningServers = {};
 
+// 📁 **서버 경로 유효성 검사 함수**
+export function validateServerPath(path) {
+    path = path.replace(/\\\\/g, '\\');
+    if (!path.startsWith('"') && !path.endsWith('"')) {
+        path = `"${path}"`;
+    }
+    return path;
+}
 
 /// 📁 서버 정보 로드
 export function loadServers() {
