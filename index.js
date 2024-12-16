@@ -59,7 +59,7 @@ client.on('messageCreate', async (message) => {
             handleStartServer(client, message, args);
             break;
 
-        case '$서버정지':
+        case '$서버종료':
             handleStopServer(client, message, args);
             break;
         

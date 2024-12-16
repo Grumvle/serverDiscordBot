@@ -1,7 +1,6 @@
 import fs from 'fs';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import 'dotenv/config';
-import { botCommand, serverCommands, ladderCommands, teamCommands, drawCommands } from './botCommands.js';
 
 const filePath = process.env.filePath;
 
@@ -169,7 +168,7 @@ export function handleStopServer(client, message, args) {
     const gameName = input[1]?.trim();
 
     if (!gameName) {
-        message.reply('❌ 사용법: `$서버정지 [게임 이름]`\n예: `$서버정지 "pzserver"`');
+        message.reply('❌ 사용법: `$서버종료 [게임 이름]`\n예: `$서버종료 "pzserver"`');
         return;
     }
 
@@ -209,8 +208,8 @@ export function handleStopServer(client, message, args) {
             });
         }
     } catch (error) {
-        console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
-        message.reply(`❌ **${gameName}** 서버 정지 중 오류가 발생했습니다.`);
+        console.error(`❌ 서버 종료 중 오류 발생: ${error.message}`);
+        message.reply(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
     }
 }
 
