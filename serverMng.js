@@ -115,7 +115,7 @@ export function handleListServers(message) {
     }
 }
 
-// 📁 서버 시작 기능
+// 📁 **서버 시작 기능**
 export function handleStartServer(client, message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
     if (!input || input.length < 2) {
@@ -141,21 +141,29 @@ export function handleStartServer(client, message, args) {
         });
 
         serverProcess.unref();
-        runningServers[gameName] = serverProcess.pid; // 실행 중인 서버의 PID 저장
 
-        serverProcess.on('error', (error) => {
-            console.error(`❌ 서버 실행 중 오류 발생: ${error.message}`);
-            message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다.`);
-        });
+        const processName = serverPath.split('\\').pop(); // 파일명만 추출
+        message.reply(`🚀 **${gameName}** 서버를 실행했습니다. 프로세스를 찾는 중...`);
 
-        message.reply(`🚀 **${gameName}** 서버가 시작되었습니다. (PID: ${serverProcess.pid})`);
+        setTimeout(() => {
+            getProcessPID(processName)
+                .then(pid => {
+                    if (pid) {
+                        runningServers[gameName] = pid;
+                        message.reply(`✅ **${gameName}** 서버의 PID: ${pid}`);
+                    } else {
+                        message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다.`);
+                    }
+                });
+        }, 5000); // 5초 후에 PID 가져오기
+
     } catch (error) {
         console.error(`❌ 서버 시작 중 오류 발생: ${error.message}`);
         message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다.`);
     }
 }
 
-// 📁 서버 정지 기능
+// 📁 **서버 정지 기능**
 export function handleStopServer(client, message, args) {
     const input = message.content.split(' ');
     const gameName = input[1]?.trim();
@@ -172,47 +180,53 @@ export function handleStopServer(client, message, args) {
     }
 
     const stopCommand = servers[gameName].stopCommand;
-    const serverPath = servers[gameName].path;
     const serverPID = runningServers[gameName];
 
     if (!serverPID) {
-        message.reply(`❌ **${gameName}** 서버는 실행 중이지 않습니다.`);
+        message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다.`);
         return;
     }
 
     try {
         if (stopCommand.toLowerCase() === 'kill') {
-            // 🔥 **PID 기반 강제 종료**
-            process.kill(serverPID, 'SIGTERM');
-            message.reply(`🛑 **${gameName}** 서버가 강제 종료되었습니다. (PID: ${serverPID})`);
-            delete runningServers[gameName];
-
+            exec(`taskkill /PID ${serverPID} /F`, (error) => {
+                if (error) {
+                    message.reply(`❌ **${gameName}** 서버 종료 중 오류 발생: ${error.message}`);
+                } else {
+                    message.reply(`🛑 **${gameName}** 서버가 강제 종료되었습니다. (PID: ${serverPID})`);
+                    delete runningServers[gameName];
+                }
+            });
         } else {
             // 🔥 **CMD 창에 명령어 입력**
-            const serverProcess = spawn('cmd.exe', ['/c', `echo ${stopCommand} | ${serverPath}`], { 
+            const serverProcess = spawn('cmd.exe', ['/c', `echo ${stopCommand} | taskkill /PID ${serverPID} /F`], { 
                 shell: true 
             });
 
-            serverProcess.stdout.on('data', (data) => {
-                console.log(`[${gameName} 서버]: ${data}`);
-            });
-
-            serverProcess.stderr.on('data', (data) => {
-                console.error(`[${gameName} 서버 에러]: ${data}`);
-            });
-
-            serverProcess.on('close', (code) => {
-                console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
+            serverProcess.on('close', () => {
                 message.reply(`🛑 **${gameName}** 서버가 정상적으로 종료되었습니다.`);
-                delete runningServers[gameName]; // 실행 중인 서버 목록에서 제거
+                delete runningServers[gameName];
             });
-
-            message.reply(`🛑 **${gameName}** 서버 종료 명령어 실행: ${stopCommand}`);
         }
     } catch (error) {
         console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
         message.reply(`❌ **${gameName}** 서버 정지 중 오류가 발생했습니다.`);
     }
+}
+
+// 📁 **프로세스 PID 가져오기**
+function getProcessPID(processName) {
+    return new Promise((resolve, reject) => {
+        exec(`tasklist /FI "IMAGENAME eq ${processName}"`, (error, stdout) => {
+            if (error) {
+                console.error('❌ tasklist 명령 실행 중 오류 발생:', error);
+                return resolve(null);
+            }
+            const match = stdout.match(/\d+/);
+            const pid = match ? parseInt(match[0], 10) : null;
+            resolve(pid);
+        });
+    });
 }
 
 // 실행 중인 서버 목록 확인
