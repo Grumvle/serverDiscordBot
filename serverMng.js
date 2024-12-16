@@ -162,6 +162,7 @@ export function handleStartServer(client, message, args) {
     }
 }
 
+
 // 📁 **서버 종료 기능**
 export async function handleStopServer(client, message, args) {
     const input = message.content.split(' ');
@@ -261,7 +262,7 @@ function getProcessPID(processName) {
 // 📁 **PID로 프로세스 종료**
 function killProcessByPID(pid) {
     return new Promise((resolve, reject) => {
-        exec(`taskkill /F /PID ${pid}`, (error, stdout, stderr) => {
+        exec(`taskkill /F /T /PID ${pid}`, (error, stdout, stderr) => {
             if (error) {
                 console.error(`❌ PID ${pid} 종료 중 오류 발생:`, error.message);
                 return reject(error);
