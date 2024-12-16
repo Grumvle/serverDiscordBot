@@ -116,7 +116,7 @@ export function handleListServers(message) {
 
 // 📁 **서버 시작 기능**
 export function handleStartServer(client, message, args) {
-    const input = message.content.match(/"([^"]+)"|(\S+)/g);
+    const input = message.content.match(/"([^"]+)"|(\S+)/g); // 명령어에서 입력을 파싱
     if (!input || input.length < 2) {
         message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
         return;
@@ -133,6 +133,14 @@ export function handleStartServer(client, message, args) {
     let serverPath = servers[gameName].path;
 
     try {
+        // 1️⃣ **경로에 공백이 있으면 큰따옴표로 감싸기**
+        if (!serverPath.startsWith('"') && !serverPath.endsWith('"')) {
+            serverPath = `"${serverPath}"`;
+        }
+
+        console.log(`🚀 실행 명령어: start "" ${serverPath}`);
+
+        // 2️⃣ **CMD 명령어로 실행 (중요: 첫 번째 "" 인수는 창 제목을 의미)**
         const serverProcess = spawn('cmd.exe', ['/c', `start "" ${serverPath}`], { 
             shell: true, 
             detached: true, 
@@ -141,9 +149,12 @@ export function handleStartServer(client, message, args) {
 
         serverProcess.unref();
 
-        const processName = serverPath.split('\\').pop(); // 파일명만 추출
+        // 3️⃣ **서버 경로에서 파일명 추출 (파일명만 가져오기)**
+        const processName = serverPath.replace(/"/g, '').split('\\').pop(); // 파일명 추출
+
         message.reply(`🚀 **${gameName}** 서버를 실행했습니다. 프로세스를 찾는 중...`);
 
+        // 4️⃣ **5초 후에 PID 가져오기 (비동기)**
         setTimeout(() => {
             getProcessPID(processName)
                 .then(pid => {
@@ -153,6 +164,10 @@ export function handleStartServer(client, message, args) {
                     } else {
                         message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다.`);
                     }
+                })
+                .catch(error => {
+                    console.error(`❌ PID 조회 중 오류 발생: ${error.message}`);
+                    message.reply(`❌ **${gameName}** 서버의 PID를 찾는 중 오류가 발생했습니다.`);
                 });
         }, 5000); // 5초 후에 PID 가져오기
 
