@@ -114,6 +114,33 @@ export function handleListServers(message) {
     }
 }
 
+/**
+ * 🔍 **프로세스 이름으로 PID를 가져오는 함수**
+ * @param {string} processName - 찾고자 하는 프로세스의 이름 (예: PalServer.exe)
+ * @returns {Promise<number>} - 찾은 프로세스의 PID를 반환
+ */
+export function getProcessPID(processName) {
+    return new Promise((resolve, reject) => {
+        try {
+            exec(`tasklist | findstr /I "${processName}"`, (error, stdout) => {
+                if (error) {
+                    return reject(new Error(`❌ **${processName}** 프로세스를 찾을 수 없습니다.`));
+                }
+                // **PID 추출**: "PalServer.exe  10828 Console 1 27,456 K" 같은 출력에서 PID(10828)만 가져옵니다.
+                const pidMatch = stdout.match(/\b\d+\b/); // 첫 번째 숫자 (PID) 찾기
+                if (pidMatch) {
+                    const pid = parseInt(pidMatch[0], 10);
+                    resolve(pid);
+                } else {
+                    reject(new Error(`❌ **${processName}** 프로세스의 PID를 찾을 수 없습니다.`));
+                }
+            });
+        } catch (error) {
+            reject(new Error(`❌ 프로세스 PID를 가져오는 중 오류가 발생했습니다: ${error.message}`));
+        }
+    });
+}
+
 // 📁 **서버 시작 기능**
 export function handleStartServer(client, message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g); // 명령어에서 입력을 파싱
