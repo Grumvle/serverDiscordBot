@@ -132,50 +132,6 @@ export function handleStartServer(client, message, args) {
     }
 
     let serverPath = servers[gameName].path;
-    if (!fs.existsSync(serverPath.replace(/"/g, ''))) {
-        message.reply(`❌ **${serverPath}** 파일을 찾을 수 없습니다.`);
-        return;
-    }
-
-    try {
-        const serverProcess = spawn(serverPath, [], {
-            shell: true,
-            detached: true, // 프로세스를 부모 프로세스로부터 분리
-            stdio: 'ignore' // 로그 출력을 무시
-        });
-
-        serverProcess.unref(); // 부모 프로세스와의 연결을 끊음
-        runningServers[gameName] = serverProcess.pid; // 실행 중인 서버의 PID 저장
-
-        serverProcess.on('error', (error) => {
-            console.error(`❌ 서버 실행 중 오류 발생: ${error.message}`);
-            message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다.`);
-        });
-
-        message.reply(`🚀 **${gameName}** 서버가 시작되었습니다. (PID: ${serverProcess.pid})`);
-    } catch (error) {
-        console.error(`❌ 서버 시작 중 오류 발생: ${error.message}`);
-        message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다.`);
-    }
-}
-
-// 📁 서버 시작 기능
-export function handleStartServer(client, message, args) {
-    const input = message.content.match(/"([^"]+)"|(\S+)/g);
-    if (!input || input.length < 2) {
-        message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
-        return;
-    }
-
-    const gameName = input[1].replace(/"/g, '').trim();
-    const servers = loadServers();
-
-    if (!servers[gameName]) {
-        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
-        return;
-    }
-
-    let serverPath = servers[gameName].path;
 
     try {
         const serverProcess = spawn('cmd.exe', ['/c', `start "" ${serverPath}`], { 
