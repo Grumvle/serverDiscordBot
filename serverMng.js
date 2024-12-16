@@ -206,67 +206,59 @@ export function handleStartServer(client, message, args) {
 
 
 // 📁 **서버 종료 기능**
-export async function handleStopServer(client, message, args) {
+export function handleStopServer(client, message, args) {
     const input = message.content.split(' ');
     const gameName = input[1]?.trim();
 
     if (!gameName) {
-        message.reply('❌ 사용법: `$서버종료 [게임 이름]`\n예: `$서버종료 "pzserver"`');
+        message.reply('❌ 사용법: `$서버종료 [게임 이름]`\n예: `$서버종료 "palworld"`');
         return;
     }
 
     const servers = loadServers();
-    const serverInfo = servers[gameName];
-
-    if (!serverInfo) {
+    if (!servers[gameName]) {
         message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
     }
 
-    const { path, stopCommand } = serverInfo;
+    const { stopCommand, path } = servers[gameName];
 
-    if (!stopCommand) {
-        message.reply(`❌ **${gameName}** 서버의 종료 명령어가 설정되지 않았습니다.`);
-        return;
-    }
+    if (stopCommand === 'kill') {
+        const processName = path.split('\\').pop(); // 파일명만 추출 (예: PalServer.exe)
+        
+        getProcessPID(processName)
+            .then(pid => {
+                if (!pid) {
+                    message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다.`);
+                    return;
+                }
 
-    if (stopCommand.toLowerCase() === 'kill') {
-        // 🛑 **taskkill 명령어로 종료**
-        try {
-            const processName = getProcessNameFromPath(path);
-            const result = await killProcessByName(processName);
-            if (result) {
-                message.reply(`✅ **${gameName}** 서버의 프로세스를 성공적으로 종료했습니다.`);
-            } else {
-                message.reply(`❌ **${gameName}** 서버의 프로세스를 찾을 수 없습니다.`);
-            }
-        } catch (error) {
-            console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
-            message.reply(`❌ **${gameName}** 서버 정지 중 오류가 발생했습니다.`);
-        }
+                return killProcessByPID(pid)
+                    .then(() => {
+                        delete runningServers[gameName];
+                        message.reply(`🛑 **${gameName}** 서버의 프로세스를 강제로 종료했습니다.`);
+                    });
+            })
+            .catch(error => {
+                console.error(`❌ PID 가져오기 중 오류 발생: ${error.message}`);
+                message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다.`);
+            });
+
     } else {
-        // 🛑 **cmd 명령어로 종료**
+        const serverProcess = runningServers[gameName];
+
         try {
-            const serverProcess = runningServers[gameName];
-
-            if (!serverProcess) {
-                message.reply(`❌ **${gameName}** 서버는 실행 중이지 않습니다.`);
-                return;
-            }
-
-            // 🛑 **현재 실행 중인 프로세스에 종료 명령어를 입력**
             serverProcess.stdin.write(`${stopCommand}\n`);
             serverProcess.stdin.end();
 
-            message.reply(`🛑 **${gameName}** 서버 종료 명령어 실행: ${stopCommand}`);
-
-            serverProcess.on('close', (code) => {
-                console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
-                delete runningServers[gameName]; // 종료되면 프로세스를 삭제
-            });
+            setTimeout(() => {
+                serverProcess.kill('SIGKILL');
+                delete runningServers[gameName];
+                message.reply(`📦 **${gameName}** 서버 종료가 완료되었습니다.`);
+            }, 5000);
         } catch (error) {
-            console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
-            message.reply(`❌ **${gameName}** 서버 정지 중 오류가 발생했습니다.`);
+            console.error(`❌ 서버 종료 중 오류 발생: ${error.message}`);
+            message.reply(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
         }
     }
 }
