@@ -141,6 +141,67 @@ export function getProcessPID(processName) {
     });
 }
 
+// 📁 **프로세스 이름 추출 함수**
+function getProcessNameFromPath(path) {
+    const parts = path.split('\\');
+    const fileName = parts[parts.length - 1];
+    return fileName.replace(/"/g, ''); // " 제거
+}
+
+// 📁 **프로세스 이름으로 PID 찾기**
+function getProcessPID(processName) {
+    return new Promise((resolve, reject) => {
+        exec(`tasklist /FI "IMAGENAME eq ${processName}"`, (error, stdout) => {
+            if (error) {
+                console.error('❌ PID 조회 중 오류 발생:', error.message);
+                return resolve(null);
+            }
+
+            const lines = stdout.trim().split('\n');
+            const pidLine = lines.find(line => line.includes(processName));
+
+            if (!pidLine) {
+                console.error(`❌ ${processName}의 PID를 찾을 수 없습니다.`);
+                return resolve(null);
+            }
+
+            const pid = pidLine.split(/\s+/)[1]; // PID 추출
+            resolve(pid);
+        });
+    });
+}
+
+// 📁 **PID로 프로세스 종료**
+function killProcessByPID(pid) {
+    return new Promise((resolve, reject) => {
+        exec(`taskkill /F /T /PID ${pid}`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`❌ PID ${pid} 종료 중 오류 발생:`, error.message);
+                return reject(error);
+            }
+            console.log(`✅ PID ${pid} 프로세스가 종료되었습니다.`);
+            resolve(true);
+        });
+    });
+}
+
+// 📁 **프로세스 이름으로 프로세스 종료**
+async function killProcessByName(processName) {
+    try {
+        const pid = await getProcessPID(processName);
+        if (!pid) {
+            console.error(`❌ ${processName}의 PID를 찾을 수 없습니다.`);
+            return false;
+        }
+
+        const result = await killProcessByPID(pid);
+        return result;
+    } catch (error) {
+        console.error(`❌ ${processName} 종료 중 오류 발생:`, error.message);
+        return false;
+    }
+}
+
 // 📁 **서버 시작 기능**
 export function handleStartServer(client, message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g); // 명령어에서 입력을 파싱
@@ -263,66 +324,7 @@ export function handleStopServer(client, message, args) {
     }
 }
 
-// 📁 **프로세스 이름 추출 함수**
-function getProcessNameFromPath(path) {
-    const parts = path.split('\\');
-    const fileName = parts[parts.length - 1];
-    return fileName.replace(/"/g, ''); // " 제거
-}
 
-// 📁 **프로세스 이름으로 PID 찾기**
-function getProcessPID(processName) {
-    return new Promise((resolve, reject) => {
-        exec(`tasklist /FI "IMAGENAME eq ${processName}"`, (error, stdout) => {
-            if (error) {
-                console.error('❌ PID 조회 중 오류 발생:', error.message);
-                return resolve(null);
-            }
-
-            const lines = stdout.trim().split('\n');
-            const pidLine = lines.find(line => line.includes(processName));
-
-            if (!pidLine) {
-                console.error(`❌ ${processName}의 PID를 찾을 수 없습니다.`);
-                return resolve(null);
-            }
-
-            const pid = pidLine.split(/\s+/)[1]; // PID 추출
-            resolve(pid);
-        });
-    });
-}
-
-// 📁 **PID로 프로세스 종료**
-function killProcessByPID(pid) {
-    return new Promise((resolve, reject) => {
-        exec(`taskkill /F /T /PID ${pid}`, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`❌ PID ${pid} 종료 중 오류 발생:`, error.message);
-                return reject(error);
-            }
-            console.log(`✅ PID ${pid} 프로세스가 종료되었습니다.`);
-            resolve(true);
-        });
-    });
-}
-
-// 📁 **프로세스 이름으로 프로세스 종료**
-async function killProcessByName(processName) {
-    try {
-        const pid = await getProcessPID(processName);
-        if (!pid) {
-            console.error(`❌ ${processName}의 PID를 찾을 수 없습니다.`);
-            return false;
-        }
-
-        const result = await killProcessByPID(pid);
-        return result;
-    } catch (error) {
-        console.error(`❌ ${processName} 종료 중 오류 발생:`, error.message);
-        return false;
-    }
-}
 
 
 // 실행 중인 서버 목록 확인
