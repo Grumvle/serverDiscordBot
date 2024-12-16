@@ -159,6 +159,46 @@ export function handleStartServer(client, message, args) {
     }
 }
 
+// 📁 서버 시작 기능
+export function handleStartServer(client, message, args) {
+    const input = message.content.match(/"([^"]+)"|(\S+)/g);
+    if (!input || input.length < 2) {
+        message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
+        return;
+    }
+
+    const gameName = input[1].replace(/"/g, '').trim();
+    const servers = loadServers();
+
+    if (!servers[gameName]) {
+        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
+        return;
+    }
+
+    let serverPath = servers[gameName].path;
+
+    try {
+        const serverProcess = spawn('cmd.exe', ['/c', `start "" ${serverPath}`], { 
+            shell: true, 
+            detached: true, 
+            stdio: 'ignore' 
+        });
+
+        serverProcess.unref();
+        runningServers[gameName] = serverProcess.pid; // 실행 중인 서버의 PID 저장
+
+        serverProcess.on('error', (error) => {
+            console.error(`❌ 서버 실행 중 오류 발생: ${error.message}`);
+            message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다.`);
+        });
+
+        message.reply(`🚀 **${gameName}** 서버가 시작되었습니다. (PID: ${serverProcess.pid})`);
+    } catch (error) {
+        console.error(`❌ 서버 시작 중 오류 발생: ${error.message}`);
+        message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다.`);
+    }
+}
+
 // 📁 서버 정지 기능
 export function handleStopServer(client, message, args) {
     const input = message.content.split(' ');
@@ -175,8 +215,9 @@ export function handleStopServer(client, message, args) {
         return;
     }
 
-    const serverPID = runningServers[gameName];
     const stopCommand = servers[gameName].stopCommand;
+    const serverPath = servers[gameName].path;
+    const serverPID = runningServers[gameName];
 
     if (!serverPID) {
         message.reply(`❌ **${gameName}** 서버는 실행 중이지 않습니다.`);
@@ -185,32 +226,38 @@ export function handleStopServer(client, message, args) {
 
     try {
         if (stopCommand.toLowerCase() === 'kill') {
-            // 🔥 **PID 기반으로 강제 종료**
+            // 🔥 **PID 기반 강제 종료**
             process.kill(serverPID, 'SIGTERM');
             message.reply(`🛑 **${gameName}** 서버가 강제 종료되었습니다. (PID: ${serverPID})`);
             delete runningServers[gameName];
-        } else if (stopCommand.toLowerCase() === 'taskkill') {
-            // 🔥 **taskkill 명령어로 프로세스 종료**
-            const serverPath = servers[gameName].path;
-            const exeFileName = serverPath.split('\\').pop();
-            exec(`taskkill /F /IM "${exeFileName}"`, (error, stdout, stderr) => {
-                if (error) {
-                    message.reply(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
-                    console.error(`❌ 서버 종료 중 오류 발생: ${error.message}`);
-                    return;
-                }
-                message.reply(`🛑 **${gameName}** 서버가 성공적으로 종료되었습니다.`);
-                delete runningServers[gameName];
-            });
+
         } else {
-            message.reply(`❌ **${gameName}** 서버의 종료 명령어가 유효하지 않습니다.`);
+            // 🔥 **CMD 창에 명령어 입력**
+            const serverProcess = spawn('cmd.exe', ['/c', `echo ${stopCommand} | ${serverPath}`], { 
+                shell: true 
+            });
+
+            serverProcess.stdout.on('data', (data) => {
+                console.log(`[${gameName} 서버]: ${data}`);
+            });
+
+            serverProcess.stderr.on('data', (data) => {
+                console.error(`[${gameName} 서버 에러]: ${data}`);
+            });
+
+            serverProcess.on('close', (code) => {
+                console.log(`"${gameName}" 서버 종료 (코드: ${code})`);
+                message.reply(`🛑 **${gameName}** 서버가 정상적으로 종료되었습니다.`);
+                delete runningServers[gameName]; // 실행 중인 서버 목록에서 제거
+            });
+
+            message.reply(`🛑 **${gameName}** 서버 종료 명령어 실행: ${stopCommand}`);
         }
     } catch (error) {
         console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
         message.reply(`❌ **${gameName}** 서버 정지 중 오류가 발생했습니다.`);
     }
 }
-
 
 // 실행 중인 서버 목록 확인
 export function handleRunningServers(message) {
