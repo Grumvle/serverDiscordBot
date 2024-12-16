@@ -182,7 +182,6 @@ export function handleStopServer(client, message, args) {
     }
 
     const serverProcess = runningServers[gameName];
-
     if (!serverProcess) {
         message.reply(`❌ **${gameName}** 서버는 실행 중이지 않습니다.`);
         return;
@@ -196,18 +195,41 @@ export function handleStopServer(client, message, args) {
     }
 
     try {
-        // 🛠️ **quit 명령어를 실행 중인 프로세스에 전달**
-        if (!serverProcess.stdin.destroyed) {
-            serverProcess.stdin.write(`${stopCommand}\n`);
-            message.reply(`🛑 **${gameName}** 서버에 quit 명령어를 입력했습니다.`);
-        } else {
-            message.reply(`❌ **${gameName}** 서버에 연결할 수 없습니다.`);
-        }
+        if (stopCommand.toLowerCase() === 'kill') {
+            // 🔥 **프로세스 강제 종료**
+            serverProcess.kill('SIGTERM');
+            message.reply(`🛑 **${gameName}** 서버가 강제 종료되었습니다.`);
+            delete runningServers[gameName];
+        } else if (stopCommand.toLowerCase() === 'taskkill') {
+            // 🔥 **taskkill 명령어로 프로세스 종료**
+            const serverPath = servers[gameName].path;
+            const exeFileName = serverPath.split('\\').pop(); // 예: PalworldServer.exe
+            const taskKillProcess = spawn('cmd.exe', ['/c', `taskkill /F /IM "${exeFileName}"`], { shell: true });
 
-        serverProcess.on('close', (code) => {
-            console.log(`🛑 **${gameName}** 서버 종료 완료 (코드: ${code})`);
-            delete runningServers[gameName]; // 서버 종료 시 실행 중인 서버 정보 삭제
-        });
+            taskKillProcess.on('error', (error) => {
+                console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
+                message.reply(`❌ **${gameName}** 서버 정지 중 오류가 발생했습니다.`);
+            });
+
+            taskKillProcess.on('close', (code) => {
+                if (code === 0) {
+                    message.reply(`🛑 **${gameName}** 서버가 성공적으로 종료되었습니다.`);
+                } else {
+                    message.reply(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
+                }
+                delete runningServers[gameName];
+            });
+        } else {
+            // 🔥 **quit 명령어를 stdin으로 전송**
+            serverProcess.stdin.write(`${stopCommand}\n`);
+            serverProcess.stdin.end();
+            message.reply(`🛑 **${gameName}** 서버 종료 명령어 실행: ${stopCommand}`);
+
+            serverProcess.on('close', (code) => {
+                console.log(`📴 **${gameName}** 서버 종료됨 (코드: ${code})`);
+                delete runningServers[gameName];
+            });
+        }
     } catch (error) {
         console.error(`❌ 서버 정지 중 오류 발생: ${error.message}`);
         message.reply(`❌ **${gameName}** 서버 정지 중 오류가 발생했습니다.`);
