@@ -162,8 +162,8 @@ export function handleStartServer(client, message, args) {
     }
 }
 
-// 📁 **서버 정지 기능**
-export function handleStopServer(client, message, args) {
+// 📁 서버 종료 기능
+export async function handleStopServer(client, message, args) {
     const input = message.content.split(' ');
     const gameName = input[1]?.trim();
 
@@ -178,52 +178,51 @@ export function handleStopServer(client, message, args) {
         return;
     }
 
-    const stopCommand = servers[gameName].stopCommand;
-    const serverPID = runningServers[gameName];
+    const serverInfo = servers[gameName];
+    const { stopCommand, path } = serverInfo;
 
-    if (!serverPID) {
-        message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다.`);
+    if (!stopCommand) {
+        message.reply(`❌ **${gameName}** 서버의 종료 명령어가 설정되지 않았습니다.`);
         return;
     }
 
-    try {
-        if (stopCommand.toLowerCase() === 'kill') {
-            exec(`taskkill /PID ${serverPID} /F`, (error) => {
-                if (error) {
-                    message.reply(`❌ **${gameName}** 서버 종료 중 오류 발생: ${error.message}`);
-                } else {
-                    message.reply(`🛑 **${gameName}** 서버가 강제 종료되었습니다. (PID: ${serverPID})`);
-                    delete runningServers[gameName];
-                }
-            });
-        } else {
-            // 🔥 **CMD 창에 명령어 입력**
-            const serverProcess = spawn('cmd.exe', ['/c', `echo ${stopCommand} | taskkill /PID ${serverPID} /F`], { 
-                shell: true 
-            });
+    // 🔴 kill 명령어로 종료하는 경우
+    if (stopCommand === 'kill') {
+        try {
+            const processName = path.split('\\').pop().replace(/"/g, '').split('.')[0] + '.exe';
+            const pid = await getProcessPID(processName);
 
-            serverProcess.on('close', () => {
-                message.reply(`🛑 **${gameName}** 서버가 정상적으로 종료되었습니다.`);
-                delete runningServers[gameName];
-            });
+            if (pid) {
+                process.kill(pid);
+                message.reply(`🛑 **${gameName}** 서버의 프로세스(${pid})가 강제 종료되었습니다.`);
+            } else {
+                message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다. 프로세스 이름: ${processName}`);
+            }
+        } catch (error) {
+            console.error(`❌ 서버 강제 종료 중 오류 발생: ${error.message}`);
+            message.reply(`❌ **${gameName}** 서버 강제 종료 중 오류가 발생했습니다.`);
         }
-    } catch (error) {
-        console.error(`❌ 서버 종료 중 오류 발생: ${error.message}`);
-        message.reply(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
+        return;
     }
+
+    message.reply(`❌ **${gameName}** 서버의 종료 명령어 실행이 실패했습니다.`);
 }
 
-// 📁 **프로세스 PID 가져오기**
+// 🔍 **프로세스 PID 찾기 함수**
 function getProcessPID(processName) {
     return new Promise((resolve, reject) => {
-        exec(`tasklist /FI "IMAGENAME eq ${processName}"`, (error, stdout) => {
+        exec(`tasklist /FI "IMAGENAME eq ${processName}" /FO LIST`, (error, stdout) => {
             if (error) {
-                console.error('❌ tasklist 명령 실행 중 오류 발생:', error);
-                return resolve(null);
+                console.error(`❌ tasklist 명령 실행 중 오류: ${error.message}`);
+                return reject(error);
             }
-            const match = stdout.match(/\d+/);
-            const pid = match ? parseInt(match[0], 10) : null;
-            resolve(pid);
+
+            const pidMatch = stdout.match(/PID:\s*(\d+)/);
+            if (pidMatch) {
+                resolve(parseInt(pidMatch[1], 10));
+            } else {
+                resolve(null);
+            }
         });
     });
 }
