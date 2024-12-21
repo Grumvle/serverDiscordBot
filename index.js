@@ -1,7 +1,6 @@
 import { botCommand, handleCommands } from './botCommands.js'; 
 import {
     handleAddServer,
-    handleListServers,
     handleStartServer,
     handleStopServer,
     handleRunningServers,
@@ -35,8 +34,6 @@ const client = new Client({
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
-    createFileIfNotExists(filePath, {});
-    updateBotStatus(client); // 봇 상태 초기화
 });
 
 client.on('messageCreate', async (message) => {
