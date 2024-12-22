@@ -125,78 +125,88 @@ client.on('messageCreate', async (message) => {
             break;
 
         case '$팀나누기':
-            if (option === '음성채널') {
-                const channelName = args.slice(0, -1).join(' ').trim();
-                const teamCount = parseInt(args[args.length - 1], 10);
-
-                if (!channelName || isNaN(teamCount)) {
-                    message.reply('사용법: $팀나누기 음성채널 [채널 이름] [팀 수]');
-                    return;
-                }
-
-                const participants = await getVoiceChannelMembersByNickname(client, channelName);
-                if (participants.length === 0) {
-                    message.reply(`"${channelName}" 채널에 참가자가 없습니다.`);
-                    return;
-                }
-
-                try {
-                    const teams = divideIntoTeams(participants, teamCount);
-                    sendTeamEmbed(message, teams);
-                } catch (error) {
-                    message.reply(error.message);
-                }
-            } else if (option === '사용자') {
-                const participants = args.slice(0, -1);
-                const teamCount = parseInt(args[args.length - 1], 10);
-
-                if (participants.length === 0 || isNaN(teamCount)) {
-                    message.reply('사용법: $팀나누기 사용자 [참가자1] [참가자2] ... [팀 수]');
-                    return;
-                }
-
-                try {
-                    const teams = divideIntoTeams(participants, teamCount);
-                    sendTeamEmbed(message, teams);
-                } catch (error) {
-                    message.reply(error.message);
-                }
+            switch(option) {
+                case '음성채널':
+                    let channelName = args.slice(0, -1).join(' ').trim();
+                    let teamCount = parseInt(args[args.length - 1], 10);
+    
+                    if (!channelName || isNaN(teamCount)) {
+                        message.reply('사용법: $팀나누기 음성채널 [채널 이름] [팀 수]');
+                        return;
+                    }
+    
+                    let participants = await getVoiceChannelMembersByNickname(client, channelName);
+                    if (participants.length === 0) {
+                        message.reply(`"${channelName}" 채널에 참가자가 없습니다.`);
+                        return;
+                    }
+    
+                    try {
+                        const teams = divideIntoTeams(participants, teamCount);
+                        sendTeamEmbed(message, teams);
+                    } catch (error) {
+                        message.reply(error.message);
+                    }
+                    break;
+                case '사용자':
+                    participants = args.slice(0, -1);
+                    teamCount = parseInt(args[args.length - 1], 10);
+    
+                    if (participants.length === 0 || isNaN(teamCount)) {
+                        message.reply('사용법: $팀나누기 사용자 [참가자1] [참가자2] ... [팀 수]');
+                        return;
+                    }
+    
+                    try {
+                        const teams = divideIntoTeams(participants, teamCount);
+                        sendTeamEmbed(message, teams);
+                    } catch (error) {
+                        message.reply(error.message);
+                    }
+                    break;
+                default:
+                    message.reply('알 수 없는 옵션입니다. $팀나누기 음성채널, $팀나누기 사용자');
+                    break;
             }
             break;
+        case '$제비뽑기':
+            switch(option) {
+                case '음성채널':
+                    const channelName = args.slice(0, -1).join(' ').trim();
+                    let drawCount = parseInt(args[args.length - 1], 10);
+                    let participants = await getVoiceChannelMembersByNickname(client, channelName);
 
-            case '$제비뽑기':
-            if (option === '음성채널') {
-                const channelName = args.slice(0, -1).join(' ').trim();
-                const drawCount = parseInt(args[args.length - 1], 10);
-                const participants = await getVoiceChannelMembersByNickname(client, channelName);
+                    if (participants.length === 0) {
+                        message.reply(`"${channelName}" 채널에 참가자가 없거나 명령어가 잘못되었습니다.`);
+                        return;
+                    }
+                    
+                    try {
+                        const winners = runDraw(participants, drawCount);
+                        message.reply(`🎉 제비뽑기 당첨자: ${winners.join(', ')}`);
+                    } catch (error) {
+                        message.reply(error.message);
+                    }
+                    break;
+                case '사용자':
+                    participants = args.slice(0, -1);
+                    drawCount = parseInt(args[args.length - 1], 10);
 
-                if (participants.length === 0) {
-                    message.reply(`"${channelName}" 채널에 참가자가 없습니다.`);
-                    return;
-                }
+                    if (participants.length === 0 || isNaN(drawCount)) {
+                        message.reply('사용법: $제비뽑기 사용자 [참가자1] [참가자2] ... [당첨 인원 수]');
+                        return;
+                    }
 
-                try {
-                    const winners = runDraw(participants, drawCount);
-                    message.reply(`🎉 제비뽑기 당첨자: ${winners.join(', ')}`);
-                } catch (error) {
-                    message.reply(error.message);
-                }
-
-            } else if (option === '사용자') {
-                const participants = args.slice(0, -1);
-                const drawCount = parseInt(args[args.length - 1], 10);
-
-                if (participants.length === 0 || isNaN(drawCount)) {
-                    message.reply('사용법: $제비뽑기 사용자 [참가자1] [참가자2] ... [당첨 인원 수]');
-                    return;
-                }
-
-                try {
-                    const winners = runDraw(participants, drawCount);
-                    message.reply(`🎉 제비뽑기 당첨자: ${winners.join(', ')}`);
-                } catch (error) {
-                    message.reply(error.message);
-                }
+                    try {
+                        const winners = runDraw(participants, drawCount);
+                        message.reply(`🎉 제비뽑기 당첨자: ${winners.join(', ')}`);
+                    } catch (error) {
+                        message.reply(error.message);
+                    }
+                    break;
+                default:
+                    message.reply('알 수 없는 옵션입니다. $제비뽑기 음성채널, $제비뽑기 사용자');
+                    break;
             }
             break;
 
