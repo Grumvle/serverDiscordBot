@@ -130,11 +130,6 @@ export function handleStartServer(client, message, args) {
 
     const serverPath = servers[gameName].path;
 
-    if (!fs.existsSync(serverPath)) {
-        message.reply(`❌ 서버 경로가 유효하지 않습니다: **${serverPath}**`);
-        return;
-    }
-
     message.reply(`🚀 **${gameName}** 서버 시작 중...`);
 
     const process = spawn('python', ['start_server.py', serverPath]);
