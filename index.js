@@ -5,6 +5,9 @@ import {
     handleStopServer,
     handleRunningServers,
     handleRemoveServer,
+    handleListServers,
+    loadServers,
+    runningServers
 } from './serverMng.js'; 
 import {
     setParticipants,
@@ -18,7 +21,7 @@ import {
 } from './teamSplit.js'; 
 import { runDraw } from './draw.js';
 import { getVoiceChannelMembersByNickname } from './utils.js';
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
 import 'dotenv/config';
 
 // 디스코드 클라이언트 생성
@@ -26,6 +29,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMembers,
@@ -54,10 +58,79 @@ client.on('messageCreate', async (message) => {
             handleListServers(message);
             break;
 
-        case '$서버시작':
-            handleStartServer(client, message, args);
+        case '$서버시작': {
+            const servers = loadServers(); // 서버 목록 로드
+            if (Object.keys(servers).length === 0) {
+                message.reply('⚠️ 등록된 서버가 없습니다.');
+                return;
+            }
+        
+            const embed = new EmbedBuilder()
+                .setTitle('🚀 서버 시작')
+                .setDescription('서버를 시작하려면 아래 이모지를 클릭하세요.')
+                .setColor('#00FF00');
+        
+            const emojiMap = {}; // 서버와 이모지 매핑
+            const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣']; // 최대 5개의 서버 지원
+            let index = 0;
+        
+            for (const [serverName, serverInfo] of Object.entries(servers)) {
+                if (index >= emojis.length) break; // 이모지 제한
+                const emoji = emojis[index++];
+                emojiMap[emoji] = serverName;
+                embed.addFields({ name: serverName, value: `${serverInfo.detail}\n이모지: ${emoji}` });
+            }
+        
+            const sentMessage = await message.reply({ embeds: [embed] });
+        
+            // 이모지 추가
+            try {
+                for (const emoji of Object.keys(emojiMap)) {
+                    await sentMessage.react(emoji);
+                }
+            } catch (err) {
+                console.error('Error while adding reactions:', err);
+            }
+        
+            // 필터 정의
+            const filter = (reaction, user) => {
+                const emojiKey = reaction.emoji.id || reaction.emoji.name;
+                return !user.bot && emojiMap[emojiKey];
+            };
+        
+            // 모든 반응 추가 후 수집기 생성
+            const collector = sentMessage.createReactionCollector({ filter, time: 30000 });
+        
+            collector.on('collect', (reaction, user) => {
+                const emojiKey = reaction.emoji.name; // 이모지 키
+                const selectedServer = emojiMap[emojiKey]; // 선택된 서버
+                if (selectedServer) {
+                    // 🚀 실행 중인지 확인
+                    if (runningServers[selectedServer]) {
+                        message.channel.send(`⚠️ **${selectedServer}** 서버는 이미 실행 중입니다.`);
+                        return;
+                    }
+        
+                    console.log(`${user.username}님이 ${selectedServer} 서버를 선택했습니다.`);
+                    message.channel.send(`${user.username}님이 **${selectedServer}** 서버를 시작합니다.`);
+        
+                    // 🚀 handleStartServer 호출로 서버 시작 처리
+                    handleStartServer(client, message, [`"${selectedServer}"`]);
+        
+                    // 실행 중인 서버로 등록
+                    runningServers[selectedServer] = true;
+                }
+            });
+        
+            collector.on('end', () => {
+                sentMessage.reply('⏰ 이모지 선택 시간이 종료되었습니다.');
+                collector.collected.forEach((reaction) => {
+                    console.log(`Reaction: ${reaction.emoji.name}, Count: ${reaction.count}`);
+                });
+            });
             break;
-
+        }
+                
         case '$서버종료':
             handleStopServer(client, message, args);
             break;

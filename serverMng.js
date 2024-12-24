@@ -6,9 +6,9 @@ import iconv from 'iconv-lite';
 const filePath = process.env.filePath;
 
 // 실행 중인 서버를 관리할 객체
-const runningServers = {};
+export const runningServers = {};
 
-// 📁 **서버 경로 유효성 검사 함수**
+// 📁 서버 경로 유효성 검사 함수
 export function validateServerPath(path) {
     path = path.replace(/\\\\/g, '\\');
     if (!path.startsWith('"') && !path.endsWith('"')) {
@@ -17,7 +17,7 @@ export function validateServerPath(path) {
     return path;
 }
 
-/// 📁 서버 정보 로드
+// 📁 서버 정보 로드
 export function loadServers() {
     try {
         if (!fs.existsSync(filePath)) {
@@ -32,7 +32,7 @@ export function loadServers() {
         return JSON.parse(fileContents);
     } catch (error) {
         console.error('❌ 서버 정보 파일을 불러오는 중 오류가 발생했습니다.', error);
-        return {}; 
+        return {};
     }
 }
 
@@ -99,118 +99,65 @@ export function handleRemoveServer(message, args) {
     saveServers(servers);
     message.reply(`🗑️ **${gameName}** 서버가 목록에서 제거되었습니다.`);
 }
+
 // 📁 서버 목록 출력
+export function handleListServers(message) {
+    const servers = loadServers(); // 서버 목록 로드
 
-process.on('uncaughtException', (error) => {
-    console.error('❌ 예기치 못한 오류 발생:', error);
-});
-
-export function handleStartServer(client, message, args) {
-const input = message.content.match(/"([^"]+)"|(\S+)/g);
-if (!input || input.length < 2) {
-    message.reply('❌ 사용법: `$서버시작 [게임 이름]`\n예: `$서버시작 "pzserver"`');
-    return;
-}
-
-const gameName = input[1].replace(/"/g, '').trim();
-const servers = loadServers();
-
-if (!servers[gameName]) {
-    message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
-    return;
-}
-
-const serverPath = servers[gameName].path;
-
-message.reply(`🚀 **${gameName}** 서버 시작 중...`);
-
-const process = spawn('python', ['start_server.py', serverPath]);
-
-process.stdout.on('data', (data) => {
-    console.log(`📘 파이썬 스크립트 stdout: ${data}`);
-});
-
-process.stderr.on('data', (data) => {
-    console.error(`📘 파이썬 스크립트 stderr: ${data}`);
-});
-
-process.on('close', (code) => {
-    if (code === 0) {
-    message.reply(`✅ **${gameName}** 서버가 성공적으로 시작되었습니다.`);
-    } else {
-    message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다. (종료 코드: ${code})`);
+    if (Object.keys(servers).length === 0) {
+        message.reply('⚠️ 등록된 서버가 없습니다.');
+        return;
     }
-});
+
+    let serverListMessage = '**등록된 서버 목록:**\n';
+    for (const [serverName, serverInfo] of Object.entries(servers)) {
+        serverListMessage += `**${serverName}** - ${serverInfo.detail}\n`;
+    }
+
+    message.reply(serverListMessage);
 }
 
+// 📁 서버 시작 기능
+export function handleStartServer(client, message, args) {
+    const input = args.join(' ').trim();
+    const gameName = input.replace(/"/g, '');
+    const servers = loadServers();
 
-// 📁 **프로세스 이름 추출 함수**
-function getExecutableFileNameFromPath(path) {
-    const parts = path.split('\\');
-    const fileName = parts[parts.length - 1].split('.')[0];
-    return fileName.replace(/"/g, ''); // " 제거
-}
+    if (!servers[gameName]) {
+        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
+        return;
+    }
 
-/**
- * 주어진 프로세스 이름을 사용해 모든 PID를 가져옵니다.
- * @param {string} processName 종료할 프로세스 이름
- * @returns {Promise<number[]>} 모든 PID 목록
- */
-export function getProcessPID(processName) {
-    return new Promise((resolve, reject) => {
-        const command = `wmic process where "name like'%${processName}%'" get ProcessId`;
+    const serverPath = servers[gameName].path;
 
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`❌ wmic 명령어 실행 중 오류 발생: ${stderr || error.message}`);
-                return reject(error);
-            }
+    if (!fs.existsSync(serverPath)) {
+        message.reply(`❌ 서버 경로가 유효하지 않습니다: **${serverPath}**`);
+        return;
+    }
 
-            const pids = stdout.split('\n')
-                .filter(line => line.trim() && !isNaN(line.trim()))
-                .map(pid => parseInt(pid.trim()));
+    message.reply(`🚀 **${gameName}** 서버 시작 중...`);
 
-            if (pids.length > 0) {
-                console.log(`📘 프로세스 ${processName}의 PID 목록: ${pids}`);
-                resolve(pids); // 모든 PID 반환
-            } else {
-                reject(new Error(`프로세스 ${processName}의 PID를 찾을 수 없습니다.`));
-            }
-        });
+    const process = spawn('python', ['start_server.py', serverPath]);
+
+    process.stdout.on('data', (data) => {
+        console.log(`📘 파이썬 스크립트 stdout: ${data}`);
+    });
+
+    process.stderr.on('data', (data) => {
+        console.error(`📘 파이썬 스크립트 stderr: ${data}`);
+    });
+
+    process.on('close', (code) => {
+        if (code === 0) {
+            message.reply(`✅ **${gameName}** 서버가 성공적으로 시작되었습니다.`);
+            runningServers[gameName] = { pid: process.pid, path: serverPath };
+        } else {
+            message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다. (종료 코드: ${code})`);
+        }
     });
 }
 
-/**
- * PID를 사용하여 프로세스를 종료합니다.
- * @param {number} pid 종료할 프로세스의 PID
- * @returns {Promise<void>}
- */
-export function killProcessByPID(pid) {
-    return new Promise((resolve, reject) => {
-        const command = `taskkill /PID ${pid} /F`;
-        console.log(`🛠️ 실행 명령어: ${command}`);
-
-        exec(command, { encoding: 'buffer' }, (error, stdout, stderr) => {
-            if (error) {
-                const errorMsg = iconv.decode(stderr, 'cp949'); // CP949에서 UTF-8로 변환
-                console.error(`❌ taskkill 실행 오류: ${errorMsg}`);
-                return reject(new Error(errorMsg));
-            }
-
-            const successMsg = iconv.decode(stdout, 'cp949'); // CP949에서 UTF-8로 변환
-            console.log(`✅ taskkill 실행 성공: ${successMsg}`);
-            resolve();
-        });
-    });
-}
-
-export function killProcessesByPID(pids) {
-    return Promise.all(
-        pids.map(pid => killProcessByPID(pid)) // 모든 PID에 대해 killProcessByPID 호출
-    );
-}
-
-// 📁 **서버 종료 기능**
+// 📁 서버 종료 기능
 export function handleStopServer(client, message, args) {
     const input = message.content.split(' ');
     const gameName = input[1]?.trim();
@@ -235,21 +182,19 @@ export function handleStopServer(client, message, args) {
                 if (pids.length === 0) {
                     throw new Error(`PID를 찾을 수 없습니다: ${processName}`);
                 }
-        
+
                 console.log(`📘 종료할 PID 목록: ${pids}`);
                 return killProcessesByPID(pids); // 모든 PID 종료
             })
             .then(() => {
-                delete runningServers[gameName]; // 종료 성공 후에 실행
+                delete runningServers[gameName]; // 실행 상태 제거
                 message.reply(`🛑 **${gameName}** 서버의 프로세스를 종료했습니다.`);
             })
             .catch(error => {
                 console.error(`❌ PID 가져오기 중 오류 발생: ${error.message}`);
                 message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다.`);
             });
-    }
-    // 🔥 **quit 명령어로 종료해야 하는 경우 (파이썬 호출)**
-    else {
+    } else {
         const windowTitle = 'StartServer64.bat';
         message.reply(`🛑 **${gameName}** 서버에 quit 명령어 전송 중...`);
 
@@ -261,12 +206,13 @@ export function handleStopServer(client, message, args) {
             }
             console.log(`📘 파이썬 스크립트 stdout: ${stdout}`);
             console.error(`📘 파이썬 스크립트 stderr: ${stderr}`);
+            delete runningServers[gameName]; // 실행 상태 제거
             message.reply(`✅ **${gameName}** 서버 종료 명령어가 성공적으로 전송되었습니다.`);
         });
     }
 }
 
-// 실행 중인 서버 목록 확인
+// 📁 실행 중인 서버 목록 확인
 export function handleRunningServers(message) {
     const running = Object.keys(runningServers);
     if (running.length === 0) {
@@ -274,4 +220,60 @@ export function handleRunningServers(message) {
     } else {
         message.reply(`실행 중인 서버 목록:\n- ${running.join('\n- ')}`);
     }
+}
+
+// 📁 유틸리티 함수들
+function getExecutableFileNameFromPath(path) {
+    const parts = path.split('\\');
+    const fileName = parts[parts.length - 1].split('.')[0];
+    return fileName.replace(/"/g, ''); // " 제거
+}
+
+export function getProcessPID(processName) {
+    return new Promise((resolve, reject) => {
+        const command = `wmic process where "name like'%${processName}%'" get ProcessId`;
+
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`❌ wmic 명령어 실행 중 오류 발생: ${stderr || error.message}`);
+                return reject(error);
+            }
+
+            const pids = stdout.split('\n')
+                .filter(line => line.trim() && !isNaN(line.trim()))
+                .map(pid => parseInt(pid.trim()));
+
+            if (pids.length > 0) {
+                console.log(`📘 프로세스 ${processName}의 PID 목록: ${pids}`);
+                resolve(pids); // 모든 PID 반환
+            } else {
+                reject(new Error(`프로세스 ${processName}의 PID를 찾을 수 없습니다.`));
+            }
+        });
+    });
+}
+
+export function killProcessByPID(pid) {
+    return new Promise((resolve, reject) => {
+        const command = `taskkill /PID ${pid} /F`;
+        console.log(`🛠️ 실행 명령어: ${command}`);
+
+        exec(command, { encoding: 'buffer' }, (error, stdout, stderr) => {
+            if (error) {
+                const errorMsg = iconv.decode(stderr, 'cp949'); // CP949에서 UTF-8로 변환
+                console.error(`❌ taskkill 실행 오류: ${errorMsg}`);
+                return reject(new Error(errorMsg));
+            }
+
+            const successMsg = iconv.decode(stdout, 'cp949'); // CP949에서 UTF-8로 변환
+            console.log(`✅ taskkill 실행 성공: ${successMsg}`);
+            resolve();
+        });
+    });
+}
+
+export function killProcessesByPID(pids) {
+    return Promise.all(
+        pids.map(pid => killProcessByPID(pid)) // 모든 PID에 대해 killProcessByPID 호출
+    );
 }
