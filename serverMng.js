@@ -4,6 +4,7 @@ import 'dotenv/config';
 import iconv from 'iconv-lite';
 
 const filePath = process.env.filePath;
+const steamPath = process.env.steamPath;
 
 // 실행 중인 서버를 관리할 객체
 const runningServers = {};
@@ -126,7 +127,7 @@ export function handleStartServer(client, message, args) {
     
     message.reply(`🚀 **${gameName}** 서버 시작 중...`);
 
-    const process = spawn('python', ['start_server.py', serverPath, gameId]);
+    const process = spawn('python', ['start_server.py', serverPath, gameId, steamPath]);
 
     process.stdout.on('data', (data) => {
         console.log(`📘 파이썬 스크립트 stdout: ${data}`);
