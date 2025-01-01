@@ -72,7 +72,7 @@ client.on('messageCreate', async (message) => {
             break;
 
         case '$서버업데이트':
-            handleUpdateServers(message);
+            handleUpdateServers(client, message, args);
             break;
 
         // 사다리 관련 명령어
