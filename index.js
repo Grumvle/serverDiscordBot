@@ -5,6 +5,7 @@ import {
     handleStopServer,
     handleRunningServers,
     handleRemoveServer,
+    handleUpdateServers,
 } from './serverMng.js'; 
 import {
     setParticipants,
@@ -20,10 +21,6 @@ import { runDraw } from './draw.js';
 import { getVoiceChannelMembersByNickname } from './utils.js';
 import { Client, GatewayIntentBits } from 'discord.js';
 import 'dotenv/config';
-
-//전역 설정
-let participants;
-let drawCount;
 
 // 디스코드 클라이언트 생성
 const client = new Client({
@@ -72,6 +69,10 @@ client.on('messageCreate', async (message) => {
 
         case '$실행서버':
             handleRunningServers(message);
+            break;
+
+        case '$서버업데이트':
+            handleUpdateServers(message);
             break;
 
         // 사다리 관련 명령어
@@ -139,7 +140,7 @@ client.on('messageCreate', async (message) => {
                         return;
                     }
     
-                    participants = await getVoiceChannelMembersByNickname(client, channelName);
+                    let participants = await getVoiceChannelMembersByNickname(client, channelName);
                     if (participants.length === 0) {
                         message.reply(`"${channelName}" 채널에 참가자가 없습니다.`);
                         return;
@@ -177,8 +178,8 @@ client.on('messageCreate', async (message) => {
             switch(option) {
                 case '음성채널':
                     const channelName = args.slice(0, -1).join(' ').trim();
-                    participants = await getVoiceChannelMembersByNickname(client, channelName);
-                    drawCount = parseInt(args[args.length - 1], 10);
+                    let drawCount = parseInt(args[args.length - 1], 10);
+                    let participants = await getVoiceChannelMembersByNickname(client, channelName);
 
                     if (participants.length === 0) {
                         message.reply(`"${channelName}" 채널에 참가자가 없거나 명령어가 잘못되었습니다.`);
