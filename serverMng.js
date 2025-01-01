@@ -4,6 +4,7 @@ import 'dotenv/config';
 import iconv from 'iconv-lite';
 
 const filePath = process.env.filePath;
+const steamPath = process.env.steamPath;
 
 // 실행 중인 서버를 관리할 객체
 export const runningServers = {};
@@ -52,16 +53,15 @@ export function saveServers(servers) {
 export function handleAddServer(message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
     if (!input || input.length < 5) {
-        message.reply('❌ 사용법: `$서버추가 [게임 이름] [서버 경로] [설명] [종료 명령어]`\n예: `$서버추가 "pzserver" "D:\\Dedicated Servers\\Project Zomboid Dedicated Server\\StartServer64.bat" "프로젝트 좀보이드 서버" quit`');
+        message.reply('❌ 사용법: `$서버추가 [게임 이름] [서버 경로] [게임 ID] [설명] [종료 명령어]`\n예: `$서버추가 "pzserver" "D:\\Dedicated Servers\\Project Zomboid Dedicated Server\\StartServer64.bat" "108600" "프로젝트 좀보이드 서버" quit`');
         return;
     }
 
     const gameName = input[1].replace(/"/g, '').trim();
-    let serverPath = input[2].replace(/"/g, '').trim();
-    const detail = input[3].replace(/"/g, '').trim();
-    const stopCommand = input[4].replace(/"/g, '').trim();
-
-    serverPath = validateServerPath(serverPath);
+    const serverPath = validateServerPath(input[2].replace(/"/g, '').trim());
+    const gameId = input[3].replace(/"/g, '').trim();
+    const detail = input[4].replace(/"/g, '').trim();
+    const stopCommand = input[5].replace(/"/g, '').trim();
 
     const servers = loadServers();
     if (servers[gameName]) {
@@ -71,6 +71,7 @@ export function handleAddServer(message, args) {
 
     servers[gameName] = {
         path: serverPath,
+        gameId: gameId,
         detail: detail,
         stopCommand: stopCommand
     };
@@ -150,6 +151,87 @@ export function handleStartServer(client, message, args) {
             message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다. (종료 코드: ${code})`);
         }
     });
+}
+
+//서버 업데이트
+export function handleUpdateServers(client, message, args) {
+    const input = message.content.match(/"([^"]+)"|(\S+)/g);
+    if (!input || input.length < 2) {
+        message.reply('❌ 사용법: `$서버업데이트 [게임 이름]`\n예: `$서버업데이트 "pzserver"`');
+        return;
+    }
+
+    const gameName = input[1].replace(/"/g, '').trim();
+    const servers = loadServers();
+
+    if (!servers[gameName]) {
+        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
+        return;
+    }
+
+    const serverPath = servers[gameName].path;
+    const gameId = servers[gameName].gameId;
+
+    // 서버 업데이트
+    message.reply(`🚀 **${gameName}** 서버 업데이트 중...`);
+
+    const process = spawn('python', ['update_server.py', serverPath, gameId, steamPath]);
+
+    process.stdout.on('data', (data) => {
+        console.log(`📘 파이썬 스크립트 stdout: ${data}`);
+    });
+
+    process.stderr.on('data', (data) => {
+        console.error(`📘 파이썬 스크립트 stderr: ${data}`);
+    });
+    process.on('close', (code) => {
+        if (code === 0) {
+            message.reply(`✅ **${gameName}** 서버 업데이트가 완료되었습니다.`);
+        } else {
+            message.reply(`❌ **${gameName}** 서버 업데이트 중 오류가 발생했습니다. (종료 코드: ${code})`);
+        }
+    });
+
+}
+
+//서버 업데이트
+export function handleUpdateServers(client, message, args) {
+    const input = message.content.match(/"([^"]+)"|(\S+)/g);
+    if (!input || input.length < 2) {
+        message.reply('❌ 사용법: `$서버업데이트 [게임 이름]`\n예: `$서버업데이트 "pzserver"`');
+        return;
+    }
+
+    const gameName = input[1].replace(/"/g, '').trim();
+    const servers = loadServers();
+
+    if (!servers[gameName]) {
+        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
+        return;
+    }
+
+    const serverPath = servers[gameName].path;
+    const gameId = servers[gameName].gameId;
+
+    message.reply(`🚀 **${gameName}** 서버 업데이트 중...`);
+
+    const process = spawn('python', ['update_server.py', serverPath, gameId, steamPath]);
+
+    process.stdout.on('data', (data) => {
+        console.log(`📘 파이썬 스크립트 stdout: ${data}`);
+    });
+
+    process.stderr.on('data', (data) => {
+        console.error(`📘 파이썬 스크립트 stderr: ${data}`);
+    });
+    process.on('close', (code) => {
+        if (code === 0) {
+            message.reply(`✅ **${gameName}** 서버 업데이트가 완료되었습니다.`);
+        } else {
+            message.reply(`❌ **${gameName}** 서버 업데이트 중 오류가 발생했습니다. (종료 코드: ${code})`);
+        }
+    });
+
 }
 
 // 📁 서버 종료 기능

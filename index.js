@@ -7,7 +7,8 @@ import {
     handleRemoveServer,
     handleListServers,
     loadServers,
-    runningServers
+    runningServers,
+    handleUpdateServers,
 } from './serverMng.js'; 
 import {
     setParticipants,
@@ -145,6 +146,10 @@ client.on('messageCreate', async (message) => {
 
         case '$실행서버':
             handleRunningServers(message);
+            break;
+
+        case '$서버업데이트':
+            handleUpdateServers(client, message, args);
             break;
 
         // 사다리 관련 명령어
