@@ -5,7 +5,6 @@ import win32gui
 import win32con
 import win32process
 import subprocess
-import update_server
 
 # 파이썬 출력 인코딩을 UTF-8로 변경
 sys.stdout.reconfigure(encoding='utf-8')
@@ -48,17 +47,12 @@ def main():
         return
 
     cmd_path = sys.argv[1]  # 명령어 경로 인수로 전달 받음
-    gameId = sys.argv[2] # 게임 서버 appId
-    steamPath = sys.argv[3] # steamcmd 경로
 
     # cmd_path에 불필요한 큰따옴표 제거
     if cmd_path.startswith('"') and cmd_path.endswith('"'):
         cmd_path = cmd_path[1:-1]  # 양쪽의 큰따옴표 제거
 
-    if update_server.update_game(cmd_path, gameId, steamPath):
-        start_server(cmd_path)
-    else:
-        print("업데이트 실패. 서버를 시작하지 않습니다.")
+    start_server(cmd_path)
 
 if __name__ == "__main__":
     main()
