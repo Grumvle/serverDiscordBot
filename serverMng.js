@@ -157,7 +157,7 @@ export function handleStartServer(client, message, args) {
 export function handleUpdateServers(client, message, args) {
     const input = message.content.match(/"([^"]+)"|(\S+)/g);
     if (!input || input.length < 2) {
-        message.reply('❌ 사용법: `$서버업데이트 [게임 이름]`\n예: `$서버업데이트 "pzserver"`');
+        message.reply('❌ 사용법: `$업데이트 [게임 이름]`\n예: `$업데이트 "pzserver"`');
         return;
     }
 

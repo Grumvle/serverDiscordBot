@@ -148,7 +148,7 @@ client.on('messageCreate', async (message) => {
             handleRunningServers(message);
             break;
 
-        case '$서버업데이트':
+        case '$업데이트':
             handleUpdateServers(client, message, args);
             break;
 
