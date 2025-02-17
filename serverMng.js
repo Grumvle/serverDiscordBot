@@ -228,7 +228,7 @@ export function handleStopServer(client, message, args) {
             })
             .catch(error => {
                 console.error(`❌ PID 가져오기 중 오류 발생: ${error.message}`);
-                message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다. 서버가 실행중이지 않습니다.`);
+                message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다. 다시 서버를 시작해주십시오.`);
                 // 실행 상태 제거
                 delete runningServers[gameName];
             });
