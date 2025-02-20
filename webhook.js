@@ -18,7 +18,7 @@ app.post("/webhook", (req, res) => {
             exec("git rev-parse origin/main", (err, remoteHash) => {
                 if (localHash.trim() !== remoteHash.trim()) {
                     console.log("🚀 업데이트 감지! git pull 실행");
-                    exec("git pull origin main && npm install && pm2 restart DiscordBot", (error, stdout) => {
+                    exec("git pull origin main && npm install && pm2 restart serverDiscordBot", (error, stdout) => {
                         if (error) {
                             console.error(`❌ 오류 발생: ${error.message}`);
                             return res.status(500).send("업데이트 중 오류 발생!");
