@@ -23,9 +23,9 @@ def update_game(cmd_path, gameId, steamPath):
 
     # SteamCMD 실행 명령어 (리스트 형태로 구성)
     command = [
-        steamPath, "+login", "anonymous",
-        "+force_install_dir", cmd_path,
-        "+app_update", gameId, "validate", "+quit"
+        steamPath, "+force_install_dir", cmd_path 
+        ,"+login", "anonymous" , "+app_update"
+        , gameId, "validate", "+quit"
     ]
 
     try:

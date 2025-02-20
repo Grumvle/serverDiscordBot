@@ -2,6 +2,7 @@ import fs from 'fs';
 import { spawn, exec } from 'child_process';
 import 'dotenv/config';
 import iconv from 'iconv-lite';
+import path from 'path';
 
 const filePath = process.env.filePath;
 const steamPath = process.env.steamPath;
@@ -169,7 +170,16 @@ export function handleUpdateServers(client, message, args) {
         return;
     }
 
-    const serverPath = servers[gameName].path;
+    let serverPath = servers[gameName].path;
+    // 실행 파일이 포함된 디렉토리 경로만 가져오기
+    if (serverPath.startsWith('"') && serverPath.endsWith('"')) {
+        serverPath = serverPath.replace(/"/g, ''); // " 제거
+    }
+
+    if (serverPath.toLowerCase().endsWith('.bat') || serverPath.toLowerCase().endsWith('.exe')) {
+        serverPath = path.resolve(path.dirname(serverPath)); // 상위 폴더 경로로 변환
+    }
+    
     const gameId = servers[gameName].gameId;
 
     message.reply(`🚀 **${gameName}** 서버 업데이트 중...`);
