@@ -1,10 +1,18 @@
 import fs from 'fs';
 import { spawn, exec } from 'child_process';
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import iconv from 'iconv-lite';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-const filePath = process.env.filePath;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// .env 파일 로드
+dotenv.config({ path: join(__dirname, '../config/.env') });
+
+const filePath = process.env.filePath || join(__dirname, '../config/servers.json');
 const steamPath = process.env.steamPath;
 
 // 실행 중인 서버를 관리할 객체

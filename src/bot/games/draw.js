@@ -1,4 +1,4 @@
-import { shuffle } from './utils.js';
+import { shuffle } from '../../utils/utils.js';
 
 /**
  * 제비뽑기를 실행하는 함수

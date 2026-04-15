@@ -1,5 +1,10 @@
 {
   "type": "module",
+  "scripts": {
+    "start": "node src/bot/index.js",
+    "deploy-commands": "node src/bot/core/deployCommands.js",
+    "dev": "npm run deploy-commands && npm run start"
+  },
   "dependencies": {
     "discord": "^0.8.2",
     "discord.js": "^14.16.3",
