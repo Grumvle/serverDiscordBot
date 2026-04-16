@@ -157,7 +157,8 @@ export async function handleTeamSplitSlashCommand(interaction) {
                 });
             });
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.channel.send({ embeds: [embed] });
+            await interaction.editReply({ content: '✅ 결과가 채널에 공개되었습니다.' });
         } catch (error) {
             await interaction.editReply({
                 content: `❌ 오류가 발생했습니다: ${error.message}`

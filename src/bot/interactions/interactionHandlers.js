@@ -138,9 +138,10 @@ export async function handleSelectMenuInteraction(interaction) {
             });
 
             // 결과를 전체 채널에 공개
+            await interaction.channel.send({ embeds: [embed] });
             await interaction.update({
-                content: '',
-                embeds: [embed],
+                content: '✅ 결과가 채널에 공개되었습니다.',
+                embeds: [],
                 components: []
             });
 
