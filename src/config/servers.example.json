@@ -1,0 +1,14 @@
+{
+    "서버이름1": {
+        "path": "C:\\Dedicated Servers\\GameServer\\StartServer.bat",
+        "gameId": "000000",
+        "detail": "서버 설명",
+        "stopCommand": "quit"
+    },
+    "서버이름2": {
+        "path": "\"C:\\Dedicated Servers\\GameServer\\Server.exe\"",
+        "gameId": "000001",
+        "detail": "서버 설명",
+        "stopCommand": "kill"
+    }
+}
