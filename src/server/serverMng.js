@@ -141,7 +141,7 @@ export async function handleStartServer(client, message, args) {
     const serverPath = servers[gameName].path;
     const statusMsg = await message.reply(`🚀 **${gameName}** 서버 시작 중...`);
 
-    const proc = spawn('python', ['start_server.py', serverPath]);
+    const proc = spawn('python', [join(__dirname, 'start_server.py'), serverPath]);
 
     proc.stdout.on('data', (data) => {
         console.log(`📘 파이썬 스크립트 stdout: ${data}`);
@@ -183,7 +183,7 @@ export async function handleUpdateServers(client, message, args) {
     const gameId = servers[gameName].gameId;
     const statusMsg = await message.reply(`🔄 **${gameName}** 서버 업데이트 중...`);
 
-    const proc = spawn('python', ['update_server.py', serverPath, gameId, steamPath]);
+    const proc = spawn('python', [join(__dirname, 'update_server.py'), serverPath, gameId, steamPath]);
 
     proc.stdout.on('data', (data) => {
         console.log(`📘 파이썬 스크립트 stdout: ${data}`);
@@ -241,7 +241,7 @@ export async function handleStopServer(client, message, args) {
             });
     } else {
         const windowTitle = 'StartServer64.bat';
-        exec(`python quit_and_close.py "${windowTitle}"`, (error, stdout, stderr) => {
+        exec(`python "${join(__dirname, 'quit_and_close.py')}" "${windowTitle}"`, (error, stdout, stderr) => {
             if (error) {
                 console.error(`❌ 파이썬 스크립트 실행 중 오류 발생: ${error.message}`);
                 statusMsg.edit(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
