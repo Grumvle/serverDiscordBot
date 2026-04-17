@@ -1,10 +1,14 @@
 module.exports = {
   apps: [
-    {
-      name: "serverDiscordBot",
-      script: "./src/bot/index.js",
-      watch: true, // 코드 변경 시 자동 재시작
-      autorestart: true, // 크래시 시 자동 재시작
+    {                                                                                                                                                                                     
+      name: 'serverDiscordBot',                                                                                                                                                           
+      script: 'src/bot/index.js',  // 기존 경로 유지                                                                                                                                    
+      cwd: 'D:/serverDiscordBot',  // 이 줄 추가                                                                                                                                          
+      instances: 1,
+      autorestart: true,                                                                                                                                                                  
+      watch: true,                                                                                                                                                                     
+      max_memory_restart: '300M',                                                                                                                                                         
+      env: { NODE_ENV: 'production' },
     },
   ],
 };
