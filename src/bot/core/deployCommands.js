@@ -125,11 +125,6 @@ const commands = [
             subcommand
                 .setName('업데이트')
                 .setDescription('서버를 업데이트합니다')
-                .addStringOption(option =>
-                    option.setName('서버명')
-                        .setDescription('업데이트할 서버 이름')
-                        .setRequired(true)
-                )
         ),
 
     // 도움말 명령어

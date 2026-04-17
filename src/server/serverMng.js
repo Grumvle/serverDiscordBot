@@ -163,52 +163,43 @@ export async function handleStartServer(client, message, args) {
 }
 
 //서버 업데이트
-export function handleUpdateServers(client, message, args) {
-    const input = message.content.match(/"([^"]+)"|(\S+)/g);
-    if (!input || input.length < 2) {
-        message.reply('❌ 사용법: `$업데이트 [게임 이름]`\n예: `$업데이트 "pzserver"`');
-        return;
-    }
-
-    const gameName = input[1].replace(/"/g, '').trim();
+export async function handleUpdateServers(client, message, args) {
+    const gameName = args.join(' ').trim().replace(/"/g, '');
     const servers = loadServers();
 
     if (!servers[gameName]) {
-        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
+        await message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
     }
 
     let serverPath = servers[gameName].path;
-    // 실행 파일이 포함된 디렉토리 경로만 가져오기
     if (serverPath.startsWith('"') && serverPath.endsWith('"')) {
-        serverPath = serverPath.replace(/"/g, ''); // " 제거
+        serverPath = serverPath.replace(/"/g, '');
     }
-
     if (serverPath.toLowerCase().endsWith('.bat') || serverPath.toLowerCase().endsWith('.exe')) {
-        serverPath = path.resolve(path.dirname(serverPath)); // 상위 폴더 경로로 변환
+        serverPath = path.resolve(path.dirname(serverPath));
     }
-    
+
     const gameId = servers[gameName].gameId;
+    const statusMsg = await message.reply(`🔄 **${gameName}** 서버 업데이트 중...`);
 
-    message.reply(`🚀 **${gameName}** 서버 업데이트 중...`);
+    const proc = spawn('python', ['update_server.py', serverPath, gameId, steamPath]);
 
-    const process = spawn('python', ['update_server.py', serverPath, gameId, steamPath]);
-
-    process.stdout.on('data', (data) => {
+    proc.stdout.on('data', (data) => {
         console.log(`📘 파이썬 스크립트 stdout: ${data}`);
     });
 
-    process.stderr.on('data', (data) => {
+    proc.stderr.on('data', (data) => {
         console.error(`📘 파이썬 스크립트 stderr: ${data}`);
     });
-    process.on('close', (code) => {
+
+    proc.on('close', async (code) => {
         if (code === 0) {
-            message.reply(`✅ **${gameName}** 서버 업데이트가 완료되었습니다.`);
+            await statusMsg.edit(`✅ **${gameName}** 서버 업데이트 완료!`);
         } else {
-            message.reply(`❌ **${gameName}** 서버 업데이트 중 오류가 발생했습니다. (종료 코드: ${code})`);
+            await statusMsg.edit(`❌ **${gameName}** 서버 업데이트 중 오류가 발생했습니다. (종료 코드: ${code})`);
         }
     });
-
 }
 
 // 📁 서버 종료 기능

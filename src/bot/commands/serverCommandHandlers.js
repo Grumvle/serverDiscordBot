@@ -16,8 +16,6 @@ import {
     handleRemoveServer,
     handleListServers,
     loadServers,
-    runningServers,
-    handleUpdateServers,
 } from '../../server/serverMng.js';
 
 export async function handleServerStartWithSelectMenu(client, message) {
@@ -74,6 +72,58 @@ export async function handleServerStartWithSelectMenu(client, message) {
     }, 30000);
 }
 
+export async function handleServerUpdateWithSelectMenu(client, message) {
+    const servers = loadServers();
+    if (Object.keys(servers).length === 0) {
+        message.reply('⚠️ 등록된 서버가 없습니다.');
+        return;
+    }
+
+    const serverOptions = Object.entries(servers).slice(0, 25).map(([name, info]) => ({
+        label: name,
+        value: name,
+        description: info.detail.substring(0, 100),
+        emoji: '🔄'
+    }));
+
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('text_server_update_select')
+        .setPlaceholder('🔄 업데이트할 서버를 선택하세요')
+        .addOptions(serverOptions);
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
+
+    const embed = new EmbedBuilder()
+        .setTitle('🔄 서버 업데이트')
+        .setDescription(`총 **${serverOptions.length}개**의 서버가 등록되어 있습니다.\n아래 드롭다운에서 업데이트할 서버를 선택하세요.`)
+        .setColor('#0099FF')
+        .addFields({
+            name: '📋 등록된 서버 목록',
+            value: serverOptions.map(option => `🔄 **${option.label}**\n   └ ${option.description}`).join('\n\n'),
+            inline: false
+        })
+        .setFooter({ text: '⏰ 30초 후 자동으로 만료됩니다.' });
+
+    const sentMessage = await message.reply({
+        embeds: [embed],
+        components: [row]
+    });
+
+    setTimeout(async () => {
+        try {
+            const disabledRow = new ActionRowBuilder().addComponents(
+                StringSelectMenuBuilder.from(selectMenu).setDisabled(true)
+            );
+            await sentMessage.edit({
+                embeds: [embed.setFooter({ text: '⏰ 선택 시간이 만료되었습니다.' })],
+                components: [disabledRow]
+            });
+        } catch (error) {
+            console.error('메뉴 비활성화 실패:', error);
+        }
+    }, 30000);
+}
+
 export function createServerCommandHandlers() {
     return {
         '$서버추가': (message, args) => handleAddServer(message, args),
@@ -82,6 +132,6 @@ export function createServerCommandHandlers() {
         '$서버종료': (client, message, args) => handleStopServer(client, message, args),
         '$서버제거': (message, args) => handleRemoveServer(message, args),
         '$실행서버': (message) => handleRunningServers(message),
-        '$업데이트': (client, message, args) => handleUpdateServers(client, message, args),
+        '$업데이트': (client, message) => handleServerUpdateWithSelectMenu(client, message),
     };
 }

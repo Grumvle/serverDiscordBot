@@ -314,15 +314,31 @@ export async function handleServerSlashCommand(interaction) {
             break;
 
         case '업데이트': {
-            const serverName = interaction.options.getString('서버명');
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            const servers = loadServers();
 
-            const mockMessage = {
-                reply: (content) => interaction.editReply({ content }),
-                channel: { send: (content) => interaction.followUp({ content }) }
-            };
+            if (Object.keys(servers).length === 0) {
+                await interaction.editReply({ content: '❌ 등록된 서버가 없습니다.' });
+                return;
+            }
 
-            handleUpdateServers(interaction.client, mockMessage, [serverName]);
+            const updateServerOptions = Object.entries(servers).slice(0, 25).map(([name, info]) => ({
+                label: name,
+                value: name,
+                description: info.detail.substring(0, 100)
+            }));
+
+            const updateSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId('server_update_select')
+                .setPlaceholder('업데이트할 서버를 선택하세요')
+                .addOptions(updateServerOptions);
+
+            const updateRow = new ActionRowBuilder().addComponents(updateSelectMenu);
+
+            await interaction.editReply({
+                content: '🔄 **서버 업데이트**\n아래에서 업데이트할 서버를 선택하세요:',
+                components: [updateRow]
+            });
             break;
         }
     }
