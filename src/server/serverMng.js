@@ -230,27 +230,29 @@ export async function handleStopServer(client, message, args) {
                 console.log(`📘 종료할 PID 목록: ${pids}`);
                 return killProcessesByPID(pids);
             })
-            .then(() => {
+            .then(async () => {
                 delete runningServers[gameName];
-                statusMsg.edit(`✅ **${gameName}** 서버가 종료되었습니다.`);
+                await statusMsg.edit(`✅ **${gameName}** 서버 종료 완료!`);
+                await message.channel.send(`🔴 **${gameName}** 서버가 오프라인 상태입니다.`);
             })
-            .catch(error => {
+            .catch(async (error) => {
                 console.error(`❌ PID 가져오기 중 오류 발생: ${error.message}`);
-                statusMsg.edit(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다. 다시 서버를 시작해주십시오.`);
+                await statusMsg.edit(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다. 다시 서버를 시작해주십시오.`);
                 delete runningServers[gameName];
             });
     } else {
         const windowTitle = 'StartServer64.bat';
-        exec(`python "${join(__dirname, 'quit_and_close.py')}" "${windowTitle}"`, (error, stdout, stderr) => {
+        exec(`python "${join(__dirname, 'quit_and_close.py')}" "${windowTitle}"`, async (error, stdout, stderr) => {
             if (error) {
                 console.error(`❌ 파이썬 스크립트 실행 중 오류 발생: ${error.message}`);
-                statusMsg.edit(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
+                await statusMsg.edit(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
                 return;
             }
             console.log(`📘 파이썬 스크립트 stdout: ${stdout}`);
             console.error(`📘 파이썬 스크립트 stderr: ${stderr}`);
             delete runningServers[gameName];
-            statusMsg.edit(`✅ **${gameName}** 서버 종료 명령어가 성공적으로 전송되었습니다.`);
+            await statusMsg.edit(`✅ **${gameName}** 서버 종료 완료!`);
+            await message.channel.send(`🔴 **${gameName}** 서버가 오프라인 상태입니다.`);
         });
     }
 }

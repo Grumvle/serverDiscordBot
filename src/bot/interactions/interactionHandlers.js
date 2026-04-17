@@ -214,7 +214,12 @@ export async function handleSelectMenuInteraction(interaction) {
         await interaction.update({ components: [], embeds: [] });
 
         const mockMessage = {
-            reply: async (content) => await interaction.followUp({ content }),
+            reply: async (content) => {
+                const msg = await interaction.followUp({ content });
+                return {
+                    edit: async (newContent) => await msg.edit(newContent)
+                };
+            },
             channel: { send: async (content) => await interaction.channel.send(content) }
         };
 
