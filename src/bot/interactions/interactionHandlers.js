@@ -173,18 +173,14 @@ export async function handleSelectMenuInteraction(interaction) {
             return;
         }
 
-        await interaction.update({
-            content: `🚀 **${selectedServer}** 서버를 시작하고 있습니다...`,
-            components: []
-        });
+        await interaction.update({ components: [] });
 
         const mockMessage = {
-            reply: (content) => interaction.followUp({ content, flags: MessageFlags.Ephemeral }),
-            channel: { send: (content) => interaction.followUp({ content, ephemeral: false }) }
+            reply: async (content) => await interaction.followUp({ content, flags: MessageFlags.Ephemeral }),
+            channel: { send: async (content) => await interaction.channel.send(content) }
         };
 
-        handleStartServer(interaction.client, mockMessage, [`"${selectedServer}"`]);
-        runningServers[selectedServer] = true;
+        await handleStartServer(interaction.client, mockMessage, [`"${selectedServer}"`]);
     }
 
     else if (action === 'text' && type === 'server' && params[0] === 'start') {
@@ -199,19 +195,14 @@ export async function handleSelectMenuInteraction(interaction) {
             return;
         }
 
-        await interaction.update({
-            content: `🚀 ${interaction.user.username}님이 **${selectedServer}** 서버를 시작합니다...`,
-            components: [],
-            embeds: []
-        });
+        await interaction.update({ components: [], embeds: [] });
 
         const mockMessage = {
-            reply: (content) => interaction.followUp({ content }),
-            channel: { send: (content) => interaction.followUp({ content }) }
+            reply: async (content) => await interaction.followUp({ content }),
+            channel: { send: async (content) => await interaction.channel.send(content) }
         };
 
-        handleStartServer(interaction.client, mockMessage, [`"${selectedServer}"`]);
-        runningServers[selectedServer] = true;
+        await handleStartServer(interaction.client, mockMessage, [`"${selectedServer}"`]);
 
         console.log(`${interaction.user.username}님이 ${selectedServer} 서버를 선택했습니다.`);
     }

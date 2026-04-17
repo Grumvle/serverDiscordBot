@@ -51,30 +51,15 @@ const commands = [
     new SlashCommandBuilder()
         .setName('사다리')
         .setDescription('사다리타기를 진행합니다')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('설정')
-                .setDescription('사다리타기 참가자를 설정합니다')
-                .addStringOption(option =>
-                    option.setName('참가자들')
-                        .setDescription('참가자들을 공백으로 구분하여 입력하세요')
-                        .setRequired(true)
-                )
+        .addStringOption(option =>
+            option.setName('참가자들')
+                .setDescription('참가자들을 공백으로 구분하여 입력하세요')
+                .setRequired(true)
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('결과')
-                .setDescription('사다리타기 결과를 설정합니다')
-                .addStringOption(option =>
-                    option.setName('결과들')
-                        .setDescription('결과들을 공백으로 구분하여 입력하세요')
-                        .setRequired(true)
-                )
-        )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('시작')
-                .setDescription('사다리타기를 시작합니다')
+        .addStringOption(option =>
+            option.setName('결과들')
+                .setDescription('결과들을 공백으로 구분하여 입력하세요')
+                .setRequired(true)
         ),
 
     // 서버 관리 명령어

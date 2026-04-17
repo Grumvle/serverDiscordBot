@@ -128,36 +128,36 @@ export function handleListServers(message) {
 }
 
 // 📁 서버 시작 기능
-export function handleStartServer(client, message, args) {
+export async function handleStartServer(client, message, args) {
     const input = args.join(' ').trim();
     const gameName = input.replace(/"/g, '');
     const servers = loadServers();
 
     if (!servers[gameName]) {
-        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
+        await message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
     }
 
     const serverPath = servers[gameName].path;
+    const statusMsg = await message.reply(`🚀 **${gameName}** 서버 시작 중...`);
 
-    message.reply(`🚀 **${gameName}** 서버 시작 중...`);
+    const proc = spawn('python', ['start_server.py', serverPath]);
 
-    const process = spawn('python', ['start_server.py', serverPath]);
-
-    process.stdout.on('data', (data) => {
+    proc.stdout.on('data', (data) => {
         console.log(`📘 파이썬 스크립트 stdout: ${data}`);
     });
 
-    process.stderr.on('data', (data) => {
+    proc.stderr.on('data', (data) => {
         console.error(`📘 파이썬 스크립트 stderr: ${data}`);
     });
 
-    process.on('close', (code) => {
+    proc.on('close', async (code) => {
         if (code === 0) {
-            message.reply(`✅ **${gameName}** 서버가 성공적으로 시작되었습니다.`);
-            runningServers[gameName] = { pid: process.pid, path: serverPath };
+            await statusMsg.edit(`✅ **${gameName}** 서버 시작 완료!`);
+            await message.channel.send(`🟢 **${gameName}** 서버가 온라인 상태입니다!`);
+            runningServers[gameName] = { pid: proc.pid, path: serverPath };
         } else {
-            message.reply(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다. (종료 코드: ${code})`);
+            await statusMsg.edit(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다. (종료 코드: ${code})`);
         }
     });
 }

@@ -192,50 +192,38 @@ export async function handleTeamSplitSlashCommand(interaction) {
  * 사다리타기 슬래시 명령어 핸들러
  */
 export async function handleLadderSlashCommand(interaction) {
-    const subcommand = interaction.options.getSubcommand();
+    const participantsStr = interaction.options.getString('참가자들');
+    const resultsStr = interaction.options.getString('결과들');
 
-    switch (subcommand) {
-        case '설정': {
-            const participants = interaction.options.getString('참가자들').split(/\s+/).filter(p => p.trim());
-            setParticipants(participants);
+    const participants = participantsStr.split(/\s+/).filter(p => p.trim());
+    const results = resultsStr.split(/\s+/).filter(r => r.trim());
 
-            await interaction.reply({
-                content: `✅ 참가자가 설정되었습니다:\n${participants.map(p => `• ${p}`).join('\n')}\n\n다음으로 \`/사다리 결과\` 명령어로 결과를 설정하세요.`,
-                flags: MessageFlags.Ephemeral
-            });
-            break;
-        }
+    if (participants.length !== results.length) {
+        await interaction.reply({
+            content: `❌ 참가자 수(${participants.length})와 결과 수(${results.length})가 일치하지 않습니다.`,
+            flags: MessageFlags.Ephemeral
+        });
+        return;
+    }
 
-        case '결과': {
-            const results = interaction.options.getString('결과들').split(/\s+/).filter(r => r.trim());
-            setResults(results);
+    setParticipants(participants);
+    setResults(results);
 
-            await interaction.reply({
-                content: `✅ 결과가 설정되었습니다:\n${results.map(r => `• ${r}`).join('\n')}\n\n이제 \`/사다리 시작\` 명령어로 사다리타기를 시작할 수 있습니다.`,
-                flags: MessageFlags.Ephemeral
-            });
-            break;
-        }
+    try {
+        const ladderResults = runLadder();
+        const resultMessage = ladderResults.map(item => `**${item.participant}**: ${item.result}`).join('\n');
 
-        case '시작': {
-            try {
-                const ladderResults = runLadder();
-                const resultMessage = ladderResults.map(item => `**${item.participant}**: ${item.result}`).join('\n');
+        const embed = new EmbedBuilder()
+            .setTitle('🪜 사다리타기 결과')
+            .setDescription(resultMessage)
+            .setColor('#FFD93D');
 
-                const embed = new EmbedBuilder()
-                    .setTitle('🪜 사다리타기 결과')
-                    .setDescription(resultMessage)
-                    .setColor('#FFD93D');
-
-                await interaction.reply({ embeds: [embed] });
-            } catch (error) {
-                await interaction.reply({
-                    content: `❌ ${error.message}`,
-                    flags: MessageFlags.Ephemeral
-                });
-            }
-            break;
-        }
+        await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+        await interaction.reply({
+            content: `❌ ${error.message}`,
+            flags: MessageFlags.Ephemeral
+        });
     }
 }
 
@@ -360,7 +348,7 @@ export async function handleHelpSlashCommand(interaction) {
             },
             {
                 name: '🪜 /사다리',
-                value: '• `/사다리 설정`: 참가자 설정\n• `/사다리 결과`: 결과 설정\n• `/사다리 시작`: 사다리타기 실행',
+                value: '• `참가자들`: 공백으로 구분된 참가자 목록\n• `결과들`: 공백으로 구분된 결과 목록\n(참가자 수와 결과 수가 같아야 합니다)',
                 inline: false
             },
             {
