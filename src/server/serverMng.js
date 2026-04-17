@@ -203,22 +203,22 @@ export async function handleUpdateServers(client, message, args) {
 }
 
 // 📁 서버 종료 기능
-export function handleStopServer(client, message, args) {
-    const input = message.content.split(' ');
-    const gameName = input[1]?.trim();
+export async function handleStopServer(client, message, args) {
+    const gameName = args.join(' ').trim().replace(/"/g, '');
 
     if (!gameName) {
-        message.reply('❌ 사용법: `$서버종료 [게임 이름]`\n예: `$서버종료 "pzserver"`');
+        await message.reply('❌ 종료할 서버 이름이 없습니다.');
         return;
     }
 
     const servers = loadServers();
     if (!servers[gameName]) {
-        message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
+        await message.reply(`❌ **${gameName}** 서버를 찾을 수 없습니다.`);
         return;
     }
 
     const { stopCommand, path } = servers[gameName];
+    const statusMsg = await message.reply(`🛑 **${gameName}** 서버 종료 중...`);
 
     if (stopCommand === 'kill') {
         const processName = getExecutableFileNameFromPath(path);
@@ -227,34 +227,30 @@ export function handleStopServer(client, message, args) {
                 if (pids.length === 0) {
                     throw new Error(`PID를 찾을 수 없습니다: ${processName}`);
                 }
-
                 console.log(`📘 종료할 PID 목록: ${pids}`);
-                return killProcessesByPID(pids); // 모든 PID 종료
+                return killProcessesByPID(pids);
             })
             .then(() => {
-                delete runningServers[gameName]; // 실행 상태 제거
-                message.reply(`🛑 **${gameName}** 서버의 프로세스를 종료했습니다.`);
+                delete runningServers[gameName];
+                statusMsg.edit(`✅ **${gameName}** 서버가 종료되었습니다.`);
             })
             .catch(error => {
                 console.error(`❌ PID 가져오기 중 오류 발생: ${error.message}`);
-                message.reply(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다. 다시 서버를 시작해주십시오.`);
-                // 실행 상태 제거
+                statusMsg.edit(`❌ **${gameName}** 서버의 PID를 찾을 수 없습니다. 다시 서버를 시작해주십시오.`);
                 delete runningServers[gameName];
             });
     } else {
         const windowTitle = 'StartServer64.bat';
-        message.reply(`🛑 **${gameName}** 서버에 quit 명령어 전송 중...`);
-
         exec(`python quit_and_close.py "${windowTitle}"`, (error, stdout, stderr) => {
             if (error) {
                 console.error(`❌ 파이썬 스크립트 실행 중 오류 발생: ${error.message}`);
-                message.reply(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
+                statusMsg.edit(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
                 return;
             }
             console.log(`📘 파이썬 스크립트 stdout: ${stdout}`);
             console.error(`📘 파이썬 스크립트 stderr: ${stderr}`);
-            delete runningServers[gameName]; // 실행 상태 제거
-            message.reply(`✅ **${gameName}** 서버 종료 명령어가 성공적으로 전송되었습니다.`);
+            delete runningServers[gameName];
+            statusMsg.edit(`✅ **${gameName}** 서버 종료 명령어가 성공적으로 전송되었습니다.`);
         });
     }
 }

@@ -150,7 +150,7 @@ client.on('messageCreate', async (message) => {
                 break;
 
             case '$서버종료':
-                serverHandlers[command](client, message, args);
+                await serverHandlers[command](client, message);
                 break;
 
             case '$업데이트':

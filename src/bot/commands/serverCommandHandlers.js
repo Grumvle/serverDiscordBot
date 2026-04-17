@@ -16,6 +16,7 @@ import {
     handleRemoveServer,
     handleListServers,
     loadServers,
+    runningServers,
 } from '../../server/serverMng.js';
 
 export async function handleServerStartWithSelectMenu(client, message) {
@@ -124,12 +125,64 @@ export async function handleServerUpdateWithSelectMenu(client, message) {
     }, 30000);
 }
 
+export async function handleServerStopWithSelectMenu(client, message) {
+    const runningList = Object.keys(runningServers);
+
+    if (runningList.length === 0) {
+        message.reply('⚠️ 현재 실행 중인 서버가 없습니다.');
+        return;
+    }
+
+    const serverOptions = runningList.slice(0, 25).map(name => ({
+        label: name,
+        value: name,
+        emoji: '🛑'
+    }));
+
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('text_server_stop_select')
+        .setPlaceholder('🛑 종료할 서버를 선택하세요')
+        .addOptions(serverOptions);
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
+
+    const embed = new EmbedBuilder()
+        .setTitle('🛑 서버 종료')
+        .setDescription(`현재 **${runningList.length}개**의 서버가 실행 중입니다.\n아래 드롭다운에서 종료할 서버를 선택하세요.`)
+        .setColor('#FF4444')
+        .addFields({
+            name: '🖥️ 실행 중인 서버',
+            value: runningList.map(name => `🛑 **${name}**`).join('\n'),
+            inline: false
+        })
+        .setFooter({ text: '⏰ 30초 후 자동으로 만료됩니다.' });
+
+    const sentMessage = await message.reply({
+        embeds: [embed],
+        components: [row]
+    });
+
+    setTimeout(async () => {
+        try {
+            const disabledRow = new ActionRowBuilder().addComponents(
+                StringSelectMenuBuilder.from(selectMenu).setDisabled(true)
+            );
+            await sentMessage.edit({
+                embeds: [embed.setFooter({ text: '⏰ 선택 시간이 만료되었습니다.' })],
+                components: [disabledRow]
+            });
+        } catch (error) {
+            console.error('메뉴 비활성화 실패:', error);
+        }
+    }, 30000);
+}
+
 export function createServerCommandHandlers() {
     return {
         '$서버추가': (message, args) => handleAddServer(message, args),
         '$서버목록': (message) => handleListServers(message),
         '$서버시작': (client, message) => handleServerStartWithSelectMenu(client, message),
-        '$서버종료': (client, message, args) => handleStopServer(client, message, args),
+        '$서버종료': (client, message) => handleServerStopWithSelectMenu(client, message),
         '$서버제거': (message, args) => handleRemoveServer(message, args),
         '$실행서버': (message) => handleRunningServers(message),
         '$업데이트': (client, message) => handleServerUpdateWithSelectMenu(client, message),

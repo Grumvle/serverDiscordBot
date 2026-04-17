@@ -17,6 +17,7 @@ import { getVoiceChannelMembersByNickname } from '../../utils/utils.js';
 import {
     handleStartServer,
     handleUpdateServers,
+    handleStopServer,
     runningServers
 } from '../../server/serverMng.js';
 
@@ -182,6 +183,32 @@ export async function handleSelectMenuInteraction(interaction) {
         };
 
         await handleStartServer(interaction.client, mockMessage, [`"${selectedServer}"`]);
+    }
+
+    else if (action === 'server' && type === 'stop') {
+        const selectedServer = interaction.values[0];
+
+        await interaction.update({ components: [] });
+
+        const mockMessage = {
+            reply: async (content) => await interaction.followUp({ content, flags: MessageFlags.Ephemeral }),
+            channel: { send: async (content) => await interaction.channel.send(content) }
+        };
+
+        await handleStopServer(interaction.client, mockMessage, [`"${selectedServer}"`]);
+    }
+
+    else if (action === 'text' && type === 'server' && params[0] === 'stop') {
+        const selectedServer = interaction.values[0];
+
+        await interaction.update({ components: [], embeds: [] });
+
+        const mockMessage = {
+            reply: async (content) => await interaction.followUp({ content }),
+            channel: { send: async (content) => await interaction.channel.send(content) }
+        };
+
+        await handleStopServer(interaction.client, mockMessage, [`"${selectedServer}"`]);
     }
 
     else if (action === 'server' && type === 'update') {

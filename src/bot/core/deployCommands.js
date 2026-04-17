@@ -80,11 +80,6 @@ const commands = [
             subcommand
                 .setName('종료')
                 .setDescription('서버를 종료합니다')
-                .addStringOption(option =>
-                    option.setName('서버명')
-                        .setDescription('종료할 서버 이름')
-                        .setRequired(true)
-                )
         )
         .addSubcommand(subcommand =>
             subcommand

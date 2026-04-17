@@ -269,15 +269,30 @@ export async function handleServerSlashCommand(interaction) {
         }
 
         case '종료': {
-            const serverName = interaction.options.getString('서버명');
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            const runningList = Object.keys(runningServers);
 
-            const mockMessage = {
-                reply: (content) => interaction.editReply({ content }),
-                channel: { send: (content) => interaction.followUp({ content }) }
-            };
+            if (runningList.length === 0) {
+                await interaction.editReply({ content: '⚠️ 현재 실행 중인 서버가 없습니다.' });
+                return;
+            }
 
-            handleStopServer(interaction.client, mockMessage, [serverName]);
+            const stopServerOptions = runningList.slice(0, 25).map(name => ({
+                label: name,
+                value: name,
+            }));
+
+            const stopSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId('server_stop_select')
+                .setPlaceholder('종료할 서버를 선택하세요')
+                .addOptions(stopServerOptions);
+
+            const stopRow = new ActionRowBuilder().addComponents(stopSelectMenu);
+
+            await interaction.editReply({
+                content: '🛑 **서버 종료**\n아래에서 종료할 서버를 선택하세요:',
+                components: [stopRow]
+            });
             break;
         }
 
