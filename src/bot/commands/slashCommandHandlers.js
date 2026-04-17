@@ -20,13 +20,13 @@ import {
     runLadder,
 } from '../games/ladder.js';
 import {
-    handleAddServer,
     handleStartServer,
     handleStopServer,
     handleRunningServers,
-    handleRemoveServer,
     handleListServers,
     loadServers,
+    saveServers,
+    validateServerPath,
     runningServers,
     handleUpdateServers,
 } from '../../server/serverMng.js';
@@ -298,16 +298,29 @@ export async function handleServerSlashCommand(interaction) {
 
         case '추가': {
             const serverName = interaction.options.getString('서버명');
-            const path = interaction.options.getString('경로');
+            const serverPath = interaction.options.getString('경로');
             const description = interaction.options.getString('설명');
+            const gameId = interaction.options.getString('게임아이디') ?? '';
+            const stopCommand = interaction.options.getString('종료명령어') ?? 'quit';
 
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-            const mockMessage = {
-                reply: (content) => interaction.editReply({ content })
-            };
+            const servers = loadServers();
+            if (servers[serverName]) {
+                await interaction.editReply({ content: `❌ **${serverName}** 서버는 이미 존재합니다.` });
+                return;
+            }
 
-            handleAddServer(mockMessage, [serverName, path, description]);
+            servers[serverName] = {
+                path: validateServerPath(serverPath),
+                gameId,
+                detail: description,
+                stopCommand,
+            };
+            saveServers(servers);
+            await interaction.editReply({
+                content: `✅ **${serverName}** 서버 추가 완료.\n📂 경로: **${serverPath}**\n📄 설명: **${description}**`
+            });
             break;
         }
 
@@ -315,18 +328,27 @@ export async function handleServerSlashCommand(interaction) {
             const serverName = interaction.options.getString('서버명');
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-            const mockMessage = {
-                reply: (content) => interaction.editReply({ content })
-            };
+            const servers = loadServers();
+            if (!servers[serverName]) {
+                await interaction.editReply({ content: `❌ **${serverName}** 서버를 찾을 수 없습니다.` });
+                return;
+            }
 
-            handleRemoveServer(mockMessage, [serverName]);
+            delete servers[serverName];
+            saveServers(servers);
+            await interaction.editReply({ content: `🗑️ **${serverName}** 서버가 목록에서 제거되었습니다.` });
             break;
         }
 
-        case '상태':
+        case '상태': {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            handleRunningServers({ reply: (content) => interaction.editReply({ content }) });
+            const running = Object.keys(runningServers);
+            const content = running.length === 0
+                ? '현재 실행 중인 서버가 없습니다.'
+                : `실행 중인 서버 목록:\n- ${running.join('\n- ')}`;
+            await interaction.editReply({ content });
             break;
+        }
 
         case '업데이트': {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -384,7 +406,7 @@ export async function handleHelpSlashCommand(interaction) {
             },
             {
                 name: '🖥️ /서버',
-                value: '• `/서버 목록`: 서버 목록 확인\n• `/서버 시작`: 서버 시작\n• `/서버 종료`: 서버 종료\n• `/서버 추가/제거`: 서버 관리',
+                value: '• `/서버 목록`: 등록된 서버 목록\n• `/서버 시작`: 서버 선택 후 시작\n• `/서버 종료`: 실행 중 서버 선택 후 종료\n• `/서버 상태`: 현재 실행 중인 서버 확인\n• `/서버 업데이트`: 서버 선택 후 업데이트\n• `/서버 추가/제거`: 서버 등록/삭제',
                 inline: false
             }
         )

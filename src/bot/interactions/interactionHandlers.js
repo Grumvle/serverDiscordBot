@@ -178,7 +178,12 @@ export async function handleSelectMenuInteraction(interaction) {
         await interaction.update({ components: [] });
 
         const mockMessage = {
-            reply: async (content) => await interaction.followUp({ content, flags: MessageFlags.Ephemeral }),
+            reply: async (content) => {
+                const msg = await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
+                return {
+                    edit: async (newContent) => await interaction.webhook.editMessage(msg.id, { content: newContent })
+                };
+            },
             channel: { send: async (content) => await interaction.channel.send(content) }
         };
 
@@ -191,7 +196,12 @@ export async function handleSelectMenuInteraction(interaction) {
         await interaction.update({ components: [] });
 
         const mockMessage = {
-            reply: async (content) => await interaction.followUp({ content, flags: MessageFlags.Ephemeral }),
+            reply: async (content) => {
+                const msg = await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
+                return {
+                    edit: async (newContent) => await interaction.webhook.editMessage(msg.id, { content: newContent })
+                };
+            },
             channel: { send: async (content) => await interaction.channel.send(content) }
         };
 
@@ -217,7 +227,12 @@ export async function handleSelectMenuInteraction(interaction) {
         await interaction.update({ components: [] });
 
         const mockMessage = {
-            reply: async (content) => await interaction.followUp({ content, flags: MessageFlags.Ephemeral }),
+            reply: async (content) => {
+                const msg = await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
+                return {
+                    edit: async (newContent) => await interaction.webhook.editMessage(msg.id, { content: newContent })
+                };
+            },
             channel: { send: async (content) => await interaction.channel.send(content) }
         };
 

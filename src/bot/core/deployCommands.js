@@ -92,13 +92,23 @@ const commands = [
                 )
                 .addStringOption(option =>
                     option.setName('경로')
-                        .setDescription('서버 실행 파일 경로')
+                        .setDescription('서버 실행 파일 경로 (.bat 또는 .exe)')
                         .setRequired(true)
                 )
                 .addStringOption(option =>
                     option.setName('설명')
                         .setDescription('서버 설명')
                         .setRequired(true)
+                )
+                .addStringOption(option =>
+                    option.setName('게임아이디')
+                        .setDescription('Steam 게임 ID (업데이트 시 사용)')
+                        .setRequired(false)
+                )
+                .addStringOption(option =>
+                    option.setName('종료명령어')
+                        .setDescription('서버 종료 명령어 (기본값: quit, 프로세스 강제종료: kill)')
+                        .setRequired(false)
                 )
         )
         .addSubcommand(subcommand =>
