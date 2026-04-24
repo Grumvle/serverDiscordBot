@@ -73,7 +73,13 @@ client.on('interactionCreate', async (interaction) => {
                 case '사다리':
                     await handleLadderSlashCommand(interaction);
                     break;
-                case '서버':
+                case '서버목록':
+                case '서버시작':
+                case '서버종료':
+                case '서버추가':
+                case '서버제거':
+                case '서버상태':
+                case '서버업데이트':
                     await handleServerSlashCommand(interaction);
                     break;
                 case '도움말':

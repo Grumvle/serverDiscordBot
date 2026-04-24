@@ -139,6 +139,7 @@ export async function handleStartServer(client, message, args) {
     }
 
     const serverPath = servers[gameName].path;
+    const serverDetail = servers[gameName].detail;
     const statusMsg = await message.reply(`🚀 **${gameName}** 서버 시작 중...`);
 
     const proc = spawn('python', [join(__dirname, 'start_server.py'), serverPath]);
@@ -154,7 +155,7 @@ export async function handleStartServer(client, message, args) {
     proc.on('close', async (code) => {
         if (code === 0) {
             await statusMsg.edit(`✅ **${gameName}** 서버 시작 완료!`);
-            await message.channel.send(`🟢 **${gameName}** 서버가 온라인 상태입니다!`);
+            await message.channel.send(`🟢 **${gameName}** 서버가 온라인 상태입니다!\n📄 ${serverDetail}`);
             runningServers[gameName] = { pid: proc.pid, path: serverPath };
         } else {
             await statusMsg.edit(`❌ **${gameName}** 서버 시작 중 오류가 발생했습니다. (종료 코드: ${code})`);
@@ -337,12 +338,16 @@ export function killProcessByPID(pid, killTree = false) {
 
         exec(command, { encoding: 'buffer' }, (error, stdout, stderr) => {
             if (error) {
-                const errorMsg = iconv.decode(stderr, 'cp949'); // CP949에서 UTF-8로 변환
+                const errorMsg = iconv.decode(stderr, 'cp949');
+                if (error.code === 128 || errorMsg.includes('찾을 수 없습니다')) {
+                    console.log(`ℹ️ 프로세스 ${pid}는 이미 종료되어 있습니다.`);
+                    return resolve();
+                }
                 console.error(`❌ taskkill 실행 오류: ${errorMsg}`);
                 return reject(new Error(errorMsg));
             }
 
-            const successMsg = iconv.decode(stdout, 'cp949'); // CP949에서 UTF-8로 변환
+            const successMsg = iconv.decode(stdout, 'cp949');
             console.log(`✅ taskkill 실행 성공: ${successMsg}`);
             resolve();
         });

@@ -231,15 +231,15 @@ export async function handleLadderSlashCommand(interaction) {
  * 서버 관리 슬래시 명령어 핸들러
  */
 export async function handleServerSlashCommand(interaction) {
-    const subcommand = interaction.options.getSubcommand();
+    const commandName = interaction.commandName;
 
-    switch (subcommand) {
-        case '목록':
+    switch (commandName) {
+        case '서버목록':
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             handleListServers({ reply: (content) => interaction.editReply({ content }) });
             break;
 
-        case '시작': {
+        case '서버시작': {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             const servers = loadServers();
 
@@ -268,7 +268,7 @@ export async function handleServerSlashCommand(interaction) {
             break;
         }
 
-        case '종료': {
+        case '서버종료': {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             const runningList = Object.keys(runningServers);
 
@@ -296,7 +296,7 @@ export async function handleServerSlashCommand(interaction) {
             break;
         }
 
-        case '추가': {
+        case '서버추가': {
             const serverName = interaction.options.getString('서버명');
             const serverPath = interaction.options.getString('경로');
             const description = interaction.options.getString('설명');
@@ -324,7 +324,7 @@ export async function handleServerSlashCommand(interaction) {
             break;
         }
 
-        case '제거': {
+        case '서버제거': {
             const serverName = interaction.options.getString('서버명');
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -340,7 +340,7 @@ export async function handleServerSlashCommand(interaction) {
             break;
         }
 
-        case '상태': {
+        case '서버상태': {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             const running = Object.keys(runningServers);
             const content = running.length === 0
@@ -350,7 +350,7 @@ export async function handleServerSlashCommand(interaction) {
             break;
         }
 
-        case '업데이트': {
+        case '서버업데이트': {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             const servers = loadServers();
 
@@ -405,8 +405,8 @@ export async function handleHelpSlashCommand(interaction) {
                 inline: false
             },
             {
-                name: '🖥️ /서버',
-                value: '• `/서버 목록`: 등록된 서버 목록\n• `/서버 시작`: 서버 선택 후 시작\n• `/서버 종료`: 실행 중 서버 선택 후 종료\n• `/서버 상태`: 현재 실행 중인 서버 확인\n• `/서버 업데이트`: 서버 선택 후 업데이트\n• `/서버 추가/제거`: 서버 등록/삭제',
+                name: '🖥️ 서버 관리',
+                value: '• `/서버목록`: 등록된 서버 목록\n• `/서버시작`: 서버 선택 후 시작\n• `/서버종료`: 실행 중 서버 선택 후 종료\n• `/서버상태`: 현재 실행 중인 서버 확인\n• `/서버업데이트`: 서버 선택 후 업데이트\n• `/서버추가` / `/서버제거`: 서버 등록/삭제',
                 inline: false
             }
         )

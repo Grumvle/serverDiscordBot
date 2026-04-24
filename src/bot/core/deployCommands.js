@@ -64,73 +64,62 @@ const commands = [
 
     // 서버 관리 명령어
     new SlashCommandBuilder()
-        .setName('서버')
-        .setDescription('게임 서버를 관리합니다')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('목록')
-                .setDescription('등록된 서버 목록을 확인합니다')
+        .setName('서버목록')
+        .setDescription('등록된 서버 목록을 확인합니다'),
+
+    new SlashCommandBuilder()
+        .setName('서버시작')
+        .setDescription('서버를 시작합니다'),
+
+    new SlashCommandBuilder()
+        .setName('서버종료')
+        .setDescription('서버를 종료합니다'),
+
+    new SlashCommandBuilder()
+        .setName('서버추가')
+        .setDescription('새 서버를 등록합니다')
+        .addStringOption(option =>
+            option.setName('서버명')
+                .setDescription('서버 이름')
+                .setRequired(true)
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('시작')
-                .setDescription('서버를 시작합니다')
+        .addStringOption(option =>
+            option.setName('경로')
+                .setDescription('서버 실행 파일 경로 (.bat 또는 .exe)')
+                .setRequired(true)
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('종료')
-                .setDescription('서버를 종료합니다')
+        .addStringOption(option =>
+            option.setName('설명')
+                .setDescription('서버 설명')
+                .setRequired(true)
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('추가')
-                .setDescription('새 서버를 등록합니다')
-                .addStringOption(option =>
-                    option.setName('서버명')
-                        .setDescription('서버 이름')
-                        .setRequired(true)
-                )
-                .addStringOption(option =>
-                    option.setName('경로')
-                        .setDescription('서버 실행 파일 경로 (.bat 또는 .exe)')
-                        .setRequired(true)
-                )
-                .addStringOption(option =>
-                    option.setName('설명')
-                        .setDescription('서버 설명')
-                        .setRequired(true)
-                )
-                .addStringOption(option =>
-                    option.setName('게임아이디')
-                        .setDescription('Steam 게임 ID (업데이트 시 사용)')
-                        .setRequired(false)
-                )
-                .addStringOption(option =>
-                    option.setName('종료명령어')
-                        .setDescription('서버 종료 명령어 (기본값: quit, 프로세스 강제종료: kill)')
-                        .setRequired(false)
-                )
+        .addStringOption(option =>
+            option.setName('게임아이디')
+                .setDescription('Steam 게임 ID (업데이트 시 사용)')
+                .setRequired(false)
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('제거')
-                .setDescription('서버를 제거합니다')
-                .addStringOption(option =>
-                    option.setName('서버명')
-                        .setDescription('제거할 서버 이름')
-                        .setRequired(true)
-                )
-        )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('상태')
-                .setDescription('현재 실행 중인 서버를 확인합니다')
-        )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('업데이트')
-                .setDescription('서버를 업데이트합니다')
+        .addStringOption(option =>
+            option.setName('종료명령어')
+                .setDescription('서버 종료 명령어 (기본값: quit, 프로세스 강제종료: kill)')
+                .setRequired(false)
         ),
+
+    new SlashCommandBuilder()
+        .setName('서버제거')
+        .setDescription('서버를 제거합니다')
+        .addStringOption(option =>
+            option.setName('서버명')
+                .setDescription('제거할 서버 이름')
+                .setRequired(true)
+        ),
+
+    new SlashCommandBuilder()
+        .setName('서버상태')
+        .setDescription('현재 실행 중인 서버를 확인합니다'),
+
+    new SlashCommandBuilder()
+        .setName('서버업데이트')
+        .setDescription('서버를 업데이트합니다'),
 
     // 도움말 명령어
     new SlashCommandBuilder()
