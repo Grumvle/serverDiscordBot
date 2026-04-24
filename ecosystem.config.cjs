@@ -6,7 +6,7 @@ module.exports = {
       cwd: 'D:/serverDiscordBot',  // 이 줄 추가                                                                                                                                          
       instances: 1,
       autorestart: true,                                                                                                                                                                  
-      watch: false,                                                                                                                                                                     
+      watch: true,                                                                                                                                                                     
       max_memory_restart: '300M',                                                                                                                                                         
       env: { NODE_ENV: 'production' },
     },
