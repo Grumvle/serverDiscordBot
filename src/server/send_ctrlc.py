@@ -6,7 +6,6 @@ import time
 kernel32 = ctypes.windll.kernel32
 sys.stdout.reconfigure(encoding='utf-8')
 
-WAIT_STEP = 1
 CREATE_NEW_PROCESS_GROUP = 0x00000200
 CTRL_C_EVENT = 0
 CTRL_BREAK_EVENT = 1
@@ -21,8 +20,6 @@ def process_exists(pid: int) -> bool:
     return still_running
 
 def send_console_event(pid: int, event: int) -> bool:
-    # Run delivery in a subprocess with CREATE_NEW_PROCESS_GROUP so it is
-    # immune to the CTRL_C_EVENT it sends into the target console.
     helper = (
         f"import ctypes,sys,signal;"
         f"signal.signal(signal.SIGINT,signal.SIG_IGN);"
@@ -46,22 +43,18 @@ def send_console_event(pid: int, event: int) -> bool:
     except subprocess.TimeoutExpired:
         return False
 
-def send_wm_close(pid: int) -> bool:
-    # taskkill without /F sends WM_CLOSE and CTRL_CLOSE_EVENT.
-    # Unreal Engine registers SetConsoleCtrlHandler for CTRL_CLOSE_EVENT,
-    # making this the most reliable graceful shutdown path on Windows.
-    result = subprocess.run(
+def send_wm_close(pid: int) -> None:
+    subprocess.run(
         ['taskkill', '/PID', str(pid)],
         capture_output=True,
-        encoding='cp949',
     )
-    return result.returncode == 0
 
 def wait_for_exit(pid: int, seconds: int) -> bool:
-    for _ in range(seconds):
+    for elapsed in range(seconds):
         if not process_exists(pid):
+            print(f"✅ 프로세스가 종료되었습니다. ({elapsed + 1}초 소요)")
             return True
-        time.sleep(WAIT_STEP)
+        time.sleep(1)
     return False
 
 if __name__ == '__main__':
@@ -71,41 +64,27 @@ if __name__ == '__main__':
 
     pid = int(sys.argv[1])
 
-    # Stage 1: CTRL_C_EVENT (standard Ctrl+C)
-    if send_console_event(pid, CTRL_C_EVENT):
-        print("✅ CTRL_C_EVENT 전송 완료. 15초 대기 중...")
-        sys.stdout.flush()
-        if wait_for_exit(pid, 15):
-            print("✅ 프로세스가 정상 종료되었습니다.")
-            sys.exit(0)
-    else:
-        print("⚠️ CTRL_C_EVENT 전송 실패 (콘솔 없는 프로세스일 수 있음)")
+    # Stage 1: CTRL_C_EVENT — wait 30s (servers may take time to save data)
+    ok1 = send_console_event(pid, CTRL_C_EVENT)
+    print(f"{'✅' if ok1 else '⚠️'} CTRL_C_EVENT {'전송' if ok1 else '전송 실패(콘솔 없음)'}. 30초 대기 중...")
+    sys.stdout.flush()
+    if wait_for_exit(pid, 30):
+        sys.exit(0)
 
     # Stage 2: CTRL_BREAK_EVENT
     print("⚠️ CTRL_BREAK_EVENT로 에스컬레이션...")
     sys.stdout.flush()
-    if send_console_event(pid, CTRL_BREAK_EVENT):
-        print("✅ CTRL_BREAK_EVENT 전송 완료. 15초 대기 중...")
-        sys.stdout.flush()
-        if wait_for_exit(pid, 15):
-            print("✅ 프로세스가 정상 종료되었습니다.")
-            sys.exit(0)
-    else:
-        print("⚠️ CTRL_BREAK_EVENT 전송 실패")
-
-    # Stage 3: WM_CLOSE / CTRL_CLOSE_EVENT via taskkill (no /F)
-    # Unreal Engine handles CTRL_CLOSE_EVENT for graceful shutdown.
-    print("⚠️ WM_CLOSE(taskkill /PID)로 에스컬레이션...")
-    sys.stdout.flush()
-    if not send_wm_close(pid):
-        print(f"❌ taskkill /PID {pid} 실패", file=sys.stderr)
-        sys.exit(1)
-
-    print("✅ WM_CLOSE 전송 완료. 30초 대기 중...")
-    sys.stdout.flush()
-    if wait_for_exit(pid, 30):
-        print("✅ 프로세스가 정상 종료되었습니다.")
+    send_console_event(pid, CTRL_BREAK_EVENT)
+    if wait_for_exit(pid, 15):
         sys.exit(0)
 
-    print(f"❌ 프로세스가 종료되지 않았습니다. 'kill' 명령어로 강제 종료하세요.", file=sys.stderr)
+    # Stage 3: WM_CLOSE / CTRL_CLOSE_EVENT via taskkill (no /F)
+    # Ignore the return value — process may already be dying from earlier signals.
+    print("⚠️ WM_CLOSE(taskkill /PID)로 에스컬레이션...")
+    sys.stdout.flush()
+    send_wm_close(pid)
+    if wait_for_exit(pid, 30):
+        sys.exit(0)
+
+    print("❌ 프로세스가 종료되지 않았습니다. 'kill' 명령어로 강제 종료하세요.", file=sys.stderr)
     sys.exit(1)
