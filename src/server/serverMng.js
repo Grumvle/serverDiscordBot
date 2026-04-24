@@ -221,14 +221,20 @@ export async function handleStopServer(client, message, args) {
     const statusMsg = await message.reply(`🛑 **${gameName}** 서버 종료 중...`);
 
     if (stopCommand === 'kill') {
-        const processName = getExecutableFileNameFromPath(path);
-        getProcessPID(processName)
+        const cleanPath = path.replace(/"/g, '');
+        const isBat = cleanPath.toLowerCase().endsWith('.bat');
+
+        const getPidPromise = isBat
+            ? getProcessPIDByCommandLine(cleanPath)
+            : getProcessPID(getExecutableFileNameFromPath(path));
+
+        getPidPromise
             .then(pids => {
                 if (pids.length === 0) {
-                    throw new Error(`PID를 찾을 수 없습니다: ${processName}`);
+                    throw new Error(`PID를 찾을 수 없습니다: ${cleanPath}`);
                 }
                 console.log(`📘 종료할 PID 목록: ${pids}`);
-                return killProcessesByPID(pids);
+                return killProcessesByPID(pids, isBat);
             })
             .then(async () => {
                 delete runningServers[gameName];
@@ -298,9 +304,35 @@ export function getProcessPID(processName) {
     });
 }
 
-export function killProcessByPID(pid) {
+export function getProcessPIDByCommandLine(batFilePath) {
     return new Promise((resolve, reject) => {
-        const command = `taskkill /PID ${pid} /F`;
+        const parts = batFilePath.split('\\');
+        const fileName = parts[parts.length - 1];
+        const command = `wmic process where "CommandLine like '%${fileName}%'" get ProcessId`;
+
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`❌ wmic 명령어 실행 중 오류 발생: ${stderr || error.message}`);
+                return reject(error);
+            }
+
+            const pids = stdout.split('\n')
+                .filter(line => line.trim() && !isNaN(line.trim()))
+                .map(pid => parseInt(pid.trim()));
+
+            if (pids.length > 0) {
+                console.log(`📘 배치 파일 ${fileName}의 PID 목록: ${pids}`);
+                resolve(pids);
+            } else {
+                reject(new Error(`배치 파일 ${fileName}의 PID를 찾을 수 없습니다.`));
+            }
+        });
+    });
+}
+
+export function killProcessByPID(pid, killTree = false) {
+    return new Promise((resolve, reject) => {
+        const command = `taskkill /PID ${pid}${killTree ? ' /T' : ''} /F`;
         console.log(`🛠️ 실행 명령어: ${command}`);
 
         exec(command, { encoding: 'buffer' }, (error, stdout, stderr) => {
@@ -317,8 +349,8 @@ export function killProcessByPID(pid) {
     });
 }
 
-export function killProcessesByPID(pids) {
+export function killProcessesByPID(pids, killTree = false) {
     return Promise.all(
-        pids.map(pid => killProcessByPID(pid)) // 모든 PID에 대해 killProcessByPID 호출
+        pids.map(pid => killProcessByPID(pid, killTree))
     );
 }
