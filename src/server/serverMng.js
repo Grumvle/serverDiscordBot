@@ -218,10 +218,35 @@ export async function handleStopServer(client, message, args) {
         return;
     }
 
-    const { stopCommand, path } = servers[gameName];
+    const { stopCommand, path, processName } = servers[gameName];
     const statusMsg = await message.reply(`🛑 **${gameName}** 서버 종료 중...`);
 
-    if (stopCommand === 'kill' || stopCommand === 'ctrlc') {
+    if (stopCommand === 'ctrlc') {
+        const cleanPath = path.replace(/"/g, '');
+        const isBat = cleanPath.toLowerCase().endsWith('.bat');
+
+        if (isBat && !processName) {
+            await statusMsg.edit(`❌ **${gameName}** 서버는 배치파일로 실행되므로 servers.json에 \`processName\` 항목이 필요합니다.\n예: \`"processName": "WindroseServer-Win64-Shipping"\``);
+            return;
+        }
+
+        const targetName = processName || getExecutableFileNameFromPath(cleanPath);
+        getProcessPID(targetName)
+            .then(pids => {
+                if (pids.length === 0) throw new Error(`PID를 찾을 수 없습니다: ${targetName}`);
+                console.log(`📘 Ctrl+C 대상 PID: ${pids[0]} (${targetName})`);
+                return sendCtrlCByPID(pids[0]);
+            })
+            .then(async () => {
+                delete runningServers[gameName];
+                await statusMsg.edit(`✅ **${gameName}** 서버 종료 완료!`);
+                await message.channel.send(`🔴 **${gameName}** 서버가 오프라인 상태입니다.`);
+            })
+            .catch(async (error) => {
+                console.error(`❌ Ctrl+C 종료 중 오류: ${error.message}`);
+                await statusMsg.edit(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다: ${error.message}`);
+            });
+    } else if (stopCommand === 'kill') {
         const cleanPath = path.replace(/"/g, '');
         const isBat = cleanPath.toLowerCase().endsWith('.bat');
 
@@ -231,17 +256,8 @@ export async function handleStopServer(client, message, args) {
 
         getPidPromise
             .then(pids => {
-                if (pids.length === 0) {
-                    throw new Error(`PID를 찾을 수 없습니다: ${cleanPath}`);
-                }
+                if (pids.length === 0) throw new Error(`PID를 찾을 수 없습니다: ${cleanPath}`);
                 console.log(`📘 종료할 PID 목록: ${pids}`);
-                if (stopCommand === 'ctrlc') {
-                    // For .bat files, pids[0] is cmd.exe — target the exe child instead.
-                    // For .exe files, pids[0] is the server itself.
-                    // Either way, send_ctrlc.py tries the pid as process group leader first,
-                    // then falls back to AttachConsole broadcast (catches cmd.exe console group).
-                    return sendCtrlCByPID(pids[0]);
-                }
                 return killProcessesByPID(pids, isBat);
             })
             .then(async () => {

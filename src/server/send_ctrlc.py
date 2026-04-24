@@ -18,21 +18,10 @@ def process_exists(pid: int) -> bool:
     return still_running
 
 def send_ctrl_c(pid: int) -> bool:
-    # First: send directly to process group led by pid (works when server has CREATE_NEW_PROCESS_GROUP)
-    if kernel32.GenerateConsoleCtrlEvent(0, pid):
-        return True
-
-    # Fallback: attach to target's console and broadcast to its entire group
-    sys.stdout.flush()
-    kernel32.FreeConsole()
-    if not kernel32.AttachConsole(pid):
-        print(f"❌ PID {pid}의 콘솔에 연결할 수 없습니다.", file=sys.stderr)
-        return False
-    kernel32.SetConsoleCtrlHandler(None, True)  # prevent killing this helper
-    result = kernel32.GenerateConsoleCtrlEvent(0, 0)
-    kernel32.SetConsoleCtrlHandler(None, False)
-    kernel32.FreeConsole()
-    return result != 0
+    # Send CTRL_C_EVENT to the process group led by pid.
+    # Works when the target EXE was launched via 'start' (new window = new process group,
+    # so the EXE's PID == its process group ID).
+    return kernel32.GenerateConsoleCtrlEvent(0, pid) != 0
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -54,7 +43,5 @@ if __name__ == '__main__':
             sys.exit(0)
         time.sleep(1)
 
-    # Signal was sent but process didn't exit in time — still report success
-    # so the Discord bot marks the server offline and stops retrying
-    print(f"⚠️ {TIMEOUT_SECONDS}초 이내에 프로세스가 종료되지 않았습니다. 강제 종료를 고려하세요.")
+    print(f"⚠️ {TIMEOUT_SECONDS}초 이내에 프로세스가 종료되지 않았습니다.")
     sys.exit(0)
