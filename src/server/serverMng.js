@@ -221,7 +221,7 @@ export async function handleStopServer(client, message, args) {
     const { stopCommand, path } = servers[gameName];
     const statusMsg = await message.reply(`🛑 **${gameName}** 서버 종료 중...`);
 
-    if (stopCommand === 'kill') {
+    if (stopCommand === 'kill' || stopCommand === 'ctrlc') {
         const cleanPath = path.replace(/"/g, '');
         const isBat = cleanPath.toLowerCase().endsWith('.bat');
 
@@ -235,6 +235,13 @@ export async function handleStopServer(client, message, args) {
                     throw new Error(`PID를 찾을 수 없습니다: ${cleanPath}`);
                 }
                 console.log(`📘 종료할 PID 목록: ${pids}`);
+                if (stopCommand === 'ctrlc') {
+                    // For .bat files, pids[0] is cmd.exe — target the exe child instead.
+                    // For .exe files, pids[0] is the server itself.
+                    // Either way, send_ctrlc.py tries the pid as process group leader first,
+                    // then falls back to AttachConsole broadcast (catches cmd.exe console group).
+                    return sendCtrlCByPID(pids[0]);
+                }
                 return killProcessesByPID(pids, isBat);
             })
             .then(async () => {
@@ -248,7 +255,8 @@ export async function handleStopServer(client, message, args) {
                 delete runningServers[gameName];
             });
     } else {
-        const windowTitle = 'StartServer64.bat';
+        const cleanPath = path.replace(/"/g, '');
+        const windowTitle = cleanPath.split('\\').pop();
         exec(`python "${join(__dirname, 'quit_and_close.py')}" "${windowTitle}"`, async (error, stdout, stderr) => {
             if (error) {
                 console.error(`❌ 파이썬 스크립트 실행 중 오류 발생: ${error.message}`);
@@ -358,4 +366,18 @@ export function killProcessesByPID(pids, killTree = false) {
     return Promise.all(
         pids.map(pid => killProcessByPID(pid, killTree))
     );
+}
+
+export function sendCtrlCByPID(pid) {
+    return new Promise((resolve, reject) => {
+        const script = join(__dirname, 'send_ctrlc.py');
+        exec(`python "${script}" ${pid}`, { encoding: 'utf8' }, (error, stdout, stderr) => {
+            if (stdout) console.log(stdout.trim());
+            if (error) {
+                console.error(`❌ Ctrl+C 전송 오류: ${stderr || error.message}`);
+                return reject(new Error(stderr || error.message));
+            }
+            resolve();
+        });
+    });
 }

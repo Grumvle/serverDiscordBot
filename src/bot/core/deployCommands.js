@@ -100,7 +100,7 @@ const commands = [
         )
         .addStringOption(option =>
             option.setName('종료명령어')
-                .setDescription('서버 종료 명령어 (기본값: quit, 프로세스 강제종료: kill)')
+                .setDescription('서버 종료 명령어 (기본값: quit, 강제종료: kill, Ctrl+C 신호: ctrlc)')
                 .setRequired(false)
         ),
 
