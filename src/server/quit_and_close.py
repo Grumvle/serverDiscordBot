@@ -7,6 +7,7 @@ import sys
 
 # 💠 인코딩 문제 해결
 sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 
 # 🔧 **WinAPI 함수 설정**
 user32 = ctypes.windll.user32

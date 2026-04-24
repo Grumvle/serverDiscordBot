@@ -5,8 +5,10 @@ import time
 
 kernel32 = ctypes.windll.kernel32
 sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 
 CREATE_NEW_PROCESS_GROUP = 0x00000200
+CREATE_NO_WINDOW = 0x08000000
 CTRL_C_EVENT = 0
 CTRL_BREAK_EVENT = 1
 
@@ -35,7 +37,7 @@ def send_console_event(pid: int, event: int) -> bool:
     try:
         result = subprocess.run(
             [sys.executable, '-c', helper, str(pid)],
-            creationflags=CREATE_NEW_PROCESS_GROUP,
+            creationflags=CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW,
             capture_output=True,
             timeout=10,
         )
@@ -46,6 +48,7 @@ def send_console_event(pid: int, event: int) -> bool:
 def send_wm_close(pid: int) -> None:
     subprocess.run(
         ['taskkill', '/PID', str(pid)],
+        creationflags=CREATE_NO_WINDOW,
         capture_output=True,
     )
 

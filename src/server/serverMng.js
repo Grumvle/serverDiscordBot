@@ -18,6 +18,10 @@ const steamPath = process.env.steamPath;
 // 실행 중인 서버를 관리할 객체
 export const runningServers = {};
 
+const PYTHON_ENV = { ...process.env, PYTHONIOENCODING: 'utf-8' };
+const PYTHON_EXEC_OPTS = { encoding: 'utf8', windowsHide: true, env: PYTHON_ENV };
+const PYTHON_SPAWN_OPTS = { windowsHide: true, env: PYTHON_ENV };
+
 // 📁 서버 경로 유효성 검사 함수
 export function validateServerPath(path) {
     path = path.replace(/\\\\/g, '\\');
@@ -142,7 +146,7 @@ export async function handleStartServer(client, message, args) {
     const serverDetail = servers[gameName].detail;
     const statusMsg = await message.reply(`🚀 **${gameName}** 서버 시작 중...`);
 
-    const proc = spawn('python', [join(__dirname, 'start_server.py'), serverPath]);
+    const proc = spawn('python', [join(__dirname, 'start_server.py'), serverPath], PYTHON_SPAWN_OPTS);
 
     proc.stdout.on('data', (data) => {
         console.log(`📘 파이썬 스크립트 stdout: ${data}`);
@@ -184,7 +188,7 @@ export async function handleUpdateServers(client, message, args) {
     const gameId = servers[gameName].gameId;
     const statusMsg = await message.reply(`🔄 **${gameName}** 서버 업데이트 중...`);
 
-    const proc = spawn('python', [join(__dirname, 'update_server.py'), serverPath, gameId, steamPath]);
+    const proc = spawn('python', [join(__dirname, 'update_server.py'), serverPath, gameId, steamPath], PYTHON_SPAWN_OPTS);
 
     proc.stdout.on('data', (data) => {
         console.log(`📘 파이썬 스크립트 stdout: ${data}`);
@@ -273,7 +277,7 @@ export async function handleStopServer(client, message, args) {
     } else {
         const cleanPath = path.replace(/"/g, '');
         const windowTitle = cleanPath.split('\\').pop();
-        exec(`python "${join(__dirname, 'quit_and_close.py')}" "${windowTitle}"`, async (error, stdout, stderr) => {
+        exec(`python "${join(__dirname, 'quit_and_close.py')}" "${windowTitle}"`, PYTHON_EXEC_OPTS, async (error, stdout, stderr) => {
             if (error) {
                 console.error(`❌ 파이썬 스크립트 실행 중 오류 발생: ${error.message}`);
                 await statusMsg.edit(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다.`);
@@ -387,7 +391,7 @@ export function killProcessesByPID(pids, killTree = false) {
 export function sendCtrlCByPID(pid) {
     return new Promise((resolve, reject) => {
         const script = join(__dirname, 'send_ctrlc.py');
-        exec(`python "${script}" ${pid}`, { encoding: 'utf8', windowsHide: true }, (error, stdout, stderr) => {
+        exec(`python "${script}" ${pid}`, PYTHON_EXEC_OPTS, (error, stdout, stderr) => {
             if (stdout) console.log(stdout.trim());
             if (error) {
                 console.error(`❌ Ctrl+C 전송 오류: ${stderr || error.message}`);

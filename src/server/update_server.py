@@ -4,8 +4,8 @@ import os
 
 # Windows에서 UTF-8 설정 적용
 if os.name == "nt":
-    import sys
     sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 
 
 def update_game(cmd_path, gameId, steamPath):

@@ -8,6 +8,7 @@ import subprocess
 
 # 파이썬 출력 인코딩을 UTF-8로 변경
 sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 
 def start_server(cmd_path):
     """CMD 명령어 또는 .exe 파일을 통해 서버를 실행합니다."""
