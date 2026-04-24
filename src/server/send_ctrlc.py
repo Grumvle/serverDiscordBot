@@ -1,4 +1,5 @@
 import ctypes
+import subprocess
 import sys
 import time
 
@@ -6,22 +7,44 @@ kernel32 = ctypes.windll.kernel32
 sys.stdout.reconfigure(encoding='utf-8')
 
 TIMEOUT_SECONDS = 30
+# Processes created with this flag are immune to CTRL_C_EVENT
+CREATE_NEW_PROCESS_GROUP = 0x00000200
 
 def process_exists(pid: int) -> bool:
     SYNCHRONIZE = 0x00100000
     handle = kernel32.OpenProcess(SYNCHRONIZE, False, pid)
     if not handle:
         return False
-    # WAIT_OBJECT_0(0) = exited, WAIT_TIMEOUT(258) = still running
-    still_running = kernel32.WaitForSingleObject(handle, 0) == 258
+    still_running = kernel32.WaitForSingleObject(handle, 0) == 258  # WAIT_TIMEOUT
     kernel32.CloseHandle(handle)
     return still_running
 
 def send_ctrl_c(pid: int) -> bool:
-    # Send CTRL_C_EVENT to the process group led by pid.
-    # Works when the target EXE was launched via 'start' (new window = new process group,
-    # so the EXE's PID == its process group ID).
-    return kernel32.GenerateConsoleCtrlEvent(0, pid) != 0
+    # Run the actual signal delivery in a subprocess with CREATE_NEW_PROCESS_GROUP.
+    # That flag makes the helper immune to CTRL_C_EVENT, so it won't kill itself
+    # when it calls GenerateConsoleCtrlEvent(0, 0) after attaching to the target console.
+    helper = (
+        "import ctypes,sys,signal;"
+        "signal.signal(signal.SIGINT,signal.SIG_IGN);"
+        "k=ctypes.windll.kernel32;"
+        "pid=int(sys.argv[1]);"
+        "k.FreeConsole();"
+        "ok=k.AttachConsole(pid);"
+        "sys.exit(1) if not ok else None;"
+        "k.SetConsoleCtrlHandler(None,True);"
+        "r=k.GenerateConsoleCtrlEvent(0,0);"
+        "sys.exit(0 if r else 1)"
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, '-c', helper, str(pid)],
+            creationflags=CREATE_NEW_PROCESS_GROUP,
+            capture_output=True,
+            timeout=10,
+        )
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

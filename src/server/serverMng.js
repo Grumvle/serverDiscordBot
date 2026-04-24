@@ -387,7 +387,7 @@ export function killProcessesByPID(pids, killTree = false) {
 export function sendCtrlCByPID(pid) {
     return new Promise((resolve, reject) => {
         const script = join(__dirname, 'send_ctrlc.py');
-        exec(`python "${script}" ${pid}`, { encoding: 'utf8' }, (error, stdout, stderr) => {
+        exec(`python "${script}" ${pid}`, { encoding: 'utf8', windowsHide: true }, (error, stdout, stderr) => {
             if (stdout) console.log(stdout.trim());
             if (error) {
                 console.error(`❌ Ctrl+C 전송 오류: ${stderr || error.message}`);
