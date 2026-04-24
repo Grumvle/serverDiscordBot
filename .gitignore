@@ -1,5 +1,10 @@
 .env
 servers.json
 node_modules/
+.claude/
 .vscode/
+.idea/
 .DS_Store
+CLAUDE.md
+.gemini/
+.codex/
