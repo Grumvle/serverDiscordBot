@@ -244,7 +244,7 @@ export async function handleStopServer(client, message, args) {
             })
             .catch(async (error) => {
                 console.error(`❌ Ctrl+C 종료 중 오류: ${error.message}`);
-                await statusMsg.edit(`❌ **${gameName}** 서버 종료 중 오류가 발생했습니다: ${error.message}`);
+                await statusMsg.edit(`❌ **${gameName}** 서버가 신호에 응답하지 않았습니다. \`$서버종료kill ${gameName}\` 로 강제 종료하세요.`);
             });
     } else if (stopCommand === 'kill') {
         const cleanPath = path.replace(/"/g, '');
